@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FILLED WITH LOVE</title>
+    <style>
+        /* Le Labo Inspired Style */
+        :root {
+            --bg-color: #ffffff;
+            --text-main: #000000;
+            --text-sub: #666666;
+            --border-color: #e5e5e5;
+            --font-stack: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-stack);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.5;
+            font-size: 14px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+
+        .brand {
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-item {
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: var(--text-sub);
+            transition: color 0.2s;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .user-profile {
+            cursor: pointer;
+            font-size: 11px;
+            text-transform: uppercase;
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            letter-spacing: 1px;
+        }
+
+        .user-profile:hover {
+            background-color: #f9f9f9;
+        }
+
+        /* Sections */
+        .section { display: none; }
+        .section.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Forms */
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 0;
+            font-family: var(--font-stack);
+            font-size: 13px;
+            outline: none;
+        }
+
+        input:focus, textarea:focus { border-color: var(--text-main); }
+
+        button {
+            background-color: var(--text-main);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+        }
+
+        button:hover { opacity: 0.8; }
+        
+        button.secondary {
+            background-color: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Posts */
+        .post-card {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .post-meta {
+            font-size: 10px;
+            color: var(--text-sub);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .post-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .post-content {
+            font-size: 14px;
+            color: #333;
+            white-space: pre-wrap;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        /* Action Bar */
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #f9f9f9;
+        }
+
+        .action-left, .action-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .text-btn {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            font-size: 11px;
+            text-transform: uppercase;
+            cursor: pointer;
+            padding: 0;
+            letter-spacing: 0.5px;
+        }
+
+        .text-btn:hover { color: var(--text-main); text-decoration: underline; }
+        
+        .like-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-sub);
+        }
+        
+        .like-btn.liked {
+            color: #000;
+            font-weight: bold;
+        }
+
+        .edit-btn { color: var(--text-sub); }
+        .delete-btn { color: #999; }
+        .delete-btn:hover { color: red; }
+
+        /* Edit Mode */
+        .edit-mode { display: none; margin-top: 10px; }
+        .edit-mode.active { display: block; }
+        .view-mode.hidden { display: none; }
+
+        /* Comments */
+        .comments-area {
+            margin-top: 20px;
+            padding-left: 15px;
+            border-left: 1px solid var(--border-color);
+            display: none;
+        }
+        .comments-area.active { display: block; }
+
+        .comment {
+            font-size: 12px;
+            margin-bottom: 10px;
+            color: var(--text-sub);
+        }
+        .comment strong { 
+            color: var(--text-main); 
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 10px;
+            margin-right: 5px;
+        }
+
+        /* Auth Modal */
+        #auth-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.98);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .auth-box {
+            width: 300px;
+            padding: 40px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .auth-toggle {
+            margin-top: 20px;
+            font-size: 10px;
+            cursor: pointer;
+            text-decoration: underline;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal">
+        <div class="auth-box">
+            <h2 style="margin-bottom: 30px; text-transform: uppercase; font-size: 14px; letter-spacing: 2px;" id="auth-title">Login</h2>
+            <input type="text" id="username" placeholder="USERNAME">
+            <input type="password" id="password" placeholder="PASSWORD">
+            <button id="auth-submit" style="width: 100%;">Sign In</button>
+            <div id="auth-error" style="color: red; font-size: 10px; margin-top: 10px;"></div>
+            <div class="auth-toggle" id="toggle-auth">Create Account</div>
+            <div class="auth-toggle" onclick="closeAuth()">Close</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="brand">FILLED WITH LOVE</div>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div class="nav-links">
+                    <div class="nav-item active" onclick="switchTab('forum')">Posts</div>
+                    <div class="nav-item" onclick="switchTab('story')">CZ's Story</div>
+                    <div class="nav-item" onclick="switchTab('kitchen')">Kitchen</div>
+                </div>
+                <div id="user-display" class="user-profile" onclick="openAuth()">
+                    Login / Register
+                </div>
+            </div>
+        </header>
+
+        <!-- Tab: Forum -->
+        <div id="tab-forum" class="section active">
+            <div id="create-post-area" class="hidden" style="margin-bottom: 50px; padding: 20px; border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: 15px; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">New Post</h3>
+                <input type="text" id="new-post-title" placeholder="TITLE">
+                <textarea id="new-post-content" rows="4" placeholder="CONTENT"></textarea>
+                <button onclick="createPost()">Publish</button>
+            </div>
+
+            <div id="posts-container">
+                <!-- Posts injected here -->
+            </div>
+        </div>
+
+        <!-- Tab: Story -->
+        <div id="tab-story" class="section">
+            <div class="post-card">
+                <div class="post-title">CZ's Little Stories</div>
+                <div class="post-content">
+                    Welcome to the story section.
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Kitchen -->
+        <div id="tab-kitchen" class="section">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1px; background: #eee; border: 1px solid #eee;">
+                <div style="background:#fff; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:10px;">Artwork 01</div>
+                <div style="background:#fff; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:10px;">Meme Set</div>
+            </div>
+        </div>
+    </div>
+
+       <script>
+        const API_URL = 'http://localhost:3000';
+        let sessionId = localStorage.getItem('sessionId');
+        let currentUser = localStorage.getItem('username');
+        let currentUserId = localStorage.getItem('userId'); // 确保这里存的是数字ID
+        let isLoginMode = true;
+
+        function init() {
+            updateUI();
+            loadPosts();
+        }
+
+        function updateUI() {
+            const userDisplay = document.getElementById('user-display');
+            const createArea = document.getElementById('create-post-area');
+            
+            if (sessionId && currentUser) {
+                userDisplay.innerText = currentUser;
+                createArea.classList.remove('hidden');
+            } else {
+                userDisplay.innerText = 'Login / Register';
+                createArea.classList.add('hidden');
+            }
+        }
+
+        window.switchTab = function(tabName) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            const navItems = document.querySelectorAll('.nav-item');
+            if(tabName === 'forum') navItems[0].classList.add('active');
+            if(tabName === 'story') navItems[1].classList.add('active');
+            if(tabName === 'kitchen') navItems[2].classList.add('active');
+        }
+
+        // --- Auth ---
+        window.openAuth = function() {
+            if (sessionId) {
+                if(confirm('Logout?')) logout();
+            } else {
+                document.getElementById('auth-modal').style.display = 'flex';
+            }
+        }
+        window.closeAuth = function() { document.getElementById('auth-modal').style.display = 'none'; }
+
+        document.getElementById('toggle-auth').addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').innerText = isLoginMode ? 'Login' : 'Register';
+            document.getElementById('auth-submit').innerText = isLoginMode ? 'Sign In' : 'Sign Up';
+            document.getElementById('toggle-auth').innerText = isLoginMode ? 'Create Account' : 'Back to Login';
+            document.getElementById('auth-error').innerText = '';
+        });
+
+        document.getElementById('auth-submit').addEventListener('click', async () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (!username || !password) return;
+
+            try {
+                const res = await fetch(`${API_URL}/${isLoginMode ? 'login' : 'register'}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message);
+
+                if (isLoginMode) {
+                    sessionId = data.sessionId;
+                    currentUser = data.username;
+                    currentUserId = data.userId; 
+                    
+                    // 强制转换为字符串存储，比较时再转数字，避免类型问题
+                    localStorage.setItem('sessionId', sessionId);
+                    localStorage.setItem('username', currentUser);
+                    localStorage.setItem('userId', String(currentUserId));
+                    
+                    closeAuth();
+                    updateUI();
+                    loadPosts();
+                } else {
+                    alert('Registered! Please login.');
+                    isLoginMode = true;
+                    document.getElementById('toggle-auth').click();
+                }
+            } catch (err) {
+                document.getElementById('auth-error').innerText = err.message;
+            }
+        });
+
+        function logout() {
+            localStorage.clear();
+            window.location.reload();
+        }
+
+        // --- Posts & Likes ---
+        async function loadPosts() {
+            console.log("Current User ID from LocalStorage:", currentUserId); // 调试日志
+
+            try {
+                const res = await fetch(`${API_URL}/posts`);
+                const posts = await res.json();
+                const container = document.getElementById('posts-container');
+                container.innerHTML = '';
+
+                for (const post of posts) {
+                    console.log(`Post ID: ${post.id}, Post User ID: ${post.user_id}, Type: ${typeof post.user_id}`); // 调试日志
+
+                    // Fetch likes count
+                    let likesCount = 0;
+                    try {
+                        const likeRes = await fetch(`${API_URL}/posts/${post.id}/likes`);
+                        const likeData = await likeRes.json();
+                        likesCount = likeData.likes;
+                    } catch (e) { console.error(e); }
+
+                    // 核心修复：使用数字类型严格比较 ID
+                    // localStorage 取出来的是字符串，post.user_id 可能是数字，所以用 == 宽松比较或都转 Number
+                    const isOwner = currentUserId && (Number(post.user_id) === Number(currentUserId));
+                    
+                    console.log(`Is Owner? ${isOwner}`); // 调试日志
+
+                    const div = document.createElement('div');
+                    div.className = 'post-card';
+                    div.id = `post-${post.id}`;
+                    div.innerHTML = `
+                        <div class="post-meta">${post.username} &mdash; ${new Date(post.created_at).toLocaleDateString()}</div>
+                        
+                        <div class="view-mode">
+                            <div class="post-title">${escapeHtml(post.title)}</div>
+                            <div class="post-content">${escapeHtml(post.content)}</div>
+                        </div>
+
+                        <div class="edit-mode">
+                            <input type="text" class="edit-title" value="${escapeHtml(post.title)}">
+                            <textarea class="edit-content" rows="4">${escapeHtml(post.content)}</textarea>
+                            <div style="display:flex; gap:10px;">
+                                <button onclick="saveEdit(${post.id})">Save</button>
+                                <button class="secondary" onclick="cancelEdit(${post.id})">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="action-bar">
+                            <div class="action-left">
+                                <button class="text-btn" onclick="toggleComments(${post.id})">Comments</button>
+                            </div>
+                            <div class="action-right">
+                                <button class="text-btn like-btn" onclick="toggleLike(${post.id}, this)">
+                                    ❤ <span class="like-count">${likesCount}</span>
+                                </button>
+                                ${isOwner ? `
+                                    <button class="text-btn edit-btn" onclick="enableEdit(${post.id})">[Edit]</button>
+                                    <button class="text-btn delete-btn" onclick="deletePost(${post.id})">[Delete]</button>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <div id="comments-${post.id}" class="comments-area">
+                            <div id="comments-list-${post.id}"></div>
+                            ${sessionId ? `
+                                <div style="margin-top:10px; display:flex;">
+                                    <input type="text" id="comment-input-${post.id}" placeholder="Write..." style="margin-bottom:0;">
+                                    <button onclick="addComment(${post.id})" style="padding:0 10px; margin-left:5px;">Send</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                    container.appendChild(div);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function toggleLike(postId, btnElement) {
+            if (!sessionId) return alert('Please login to like');
+            try {
+                let res = await fetch(`${API_URL}/posts/${postId}/like`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId })
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    if (data.message === 'Already liked') {
+                        res = await fetch(`${API_URL}/posts/${postId}/like`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ sessionId })
+                        });
+                    } else {
+                        throw new Error(data.message);
+                    }
+                }
+
+                const likeRes = await fetch(`${API_URL}/posts/${postId}/likes`);
+                const likeData = await likeRes.json();
+                btnElement.querySelector('.like-count').innerText = likeData.likes;
+                
+                btnElement.style.opacity = '0.5';
+                setTimeout(() => btnElement.style.opacity = '1', 200);
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function createPost() {
+            const title = document.getElementById('new-post-title').value;
+            const content = document.getElementById('new-post-content').value;
+            if (!title || !content) return alert('Fill all fields');
+
+            try {
+                const res = await fetch(`${API_URL}/posts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, title, content })
+                });
+                if (res.ok) {
+                    document.getElementById('new-post-title').value = '';
+                    document.getElementById('new-post-content').value = '';
+                    loadPosts();
+                } else {
+                    alert((await res.json()).message);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function deletePost(id) {
+            if (!confirm('Delete this post?')) return;
+            try {
+                const res = await fetch(`${API_URL}/posts/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    loadPosts();
+                } else {
+                    alert(data.message || 'Failed to delete');
+                }
+            } catch (err) {
+                console.error(err);
+                alert(err.message);
+            }
+        }
+
+        // --- Edit Logic ---
+        window.enableEdit = function(id) {
+            const postEl = document.getElementById(`post-${id}`);
+            postEl.querySelector('.view-mode').classList.add('hidden');
+            postEl.querySelector('.edit-mode').classList.add('active');
+        }
+
+        window.cancelEdit = function(id) {
+            const postEl = document.getElementById(`post-${id}`);
+            postEl.querySelector('.view-mode').classList.remove('hidden');
+            postEl.querySelector('.edit-mode').classList.remove('active');
+        }
+
+        window.saveEdit = async function(id) {
+            const postEl = document.getElementById(`post-${id}`);
+            const title = postEl.querySelector('.edit-title').value;
+            const content = postEl.querySelector('.edit-content').value;
+
+            try {
+                const res = await fetch(`${API_URL}/posts/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, title, content })
+                });
+                if (res.ok) loadPosts();
+                else alert((await res.json()).message);
+            } catch (err) { console.error(err); }
+        }
+
+        // --- Comments ---
+        window.toggleComments = async function(postId) {
+            const area = document.getElementById(`comments-${postId}`);
+            area.classList.toggle('active');
+            if (area.classList.contains('active')) {
+                const res = await fetch(`${API_URL}/posts/${postId}/comments`);
+                const comments = await res.json();
+                document.getElementById(`comments-list-${postId}`).innerHTML = comments.map(c => `
+                    <div class="comment"><strong>${c.username}:</strong> ${escapeHtml(c.content)}</div>
+                `).join('');
+            }
+        }
+
+        window.addComment = async function(postId) {
+            const input = document.getElementById(`comment-input-${postId}`);
+            if (!input.value) return;
+            try {
+                const res = await fetch(`${API_URL}/comments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, postId, content: input.value })
+                });
+                if (res.ok) {
+                    input.value = '';
+                    toggleComments(postId);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        init();
+    </script>
+</body>
+</html>
