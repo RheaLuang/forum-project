@@ -1,16 +1,102 @@
 const express = require('express');
 const cors = require('cors');
-const crypto = require('crypto');
-const db = require('../db/db');
+const mysql = require('mysql2');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
+const PORT = 3000;
+
+// =======================
+// Basic Middleware
+// =======================
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// 让前端可以访问 uploads 里的图片
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// 如果 uploads 文件夹不存在，自动创建
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+// =======================
+// MySQL Connection
+// =======================
+
+const db = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: '123456', // 这里改成你自己的 MySQL 密码
+  database: 'forum_db'
+});
+
+db.connect((err) => {
+  if (err) {
+    console.error('MySQL connection failed:', err);
+    return;
+  }
+
+  console.log('Connected to MySQL forum_db');
+});
+
+// =======================
+// Multer Upload Config
+// =======================
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + ext;
+    cb(null, uniqueName);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed'));
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024
+  }
+});
+
+// =======================
+// Helper Functions
+// =======================
+
+function generateSessionId() {
+  return 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+}
 
 function getUserBySession(sessionId, callback) {
+  if (!sessionId) {
+    return callback(null, null);
+  }
+
   db.query(
-    'SELECT user_id FROM sessions WHERE session_id = ?',
+    `
+    SELECT users.id, users.username, users.avatar
+    FROM sessions
+    JOIN users ON sessions.user_id = users.id
+    WHERE sessions.session_id = ?
+    `,
     [sessionId],
     (err, results) => {
       if (err) return callback(err);
@@ -19,61 +105,56 @@ function getUserBySession(sessionId, callback) {
         return callback(null, null);
       }
 
-      callback(null, results[0].user_id);
+      callback(null, results[0]);
     }
   );
 }
+
+function deleteUploadedFiles(files) {
+  if (!files || files.length === 0) return;
+
+  files.forEach(file => {
+    fs.unlink(file.path, (err) => {
+      if (err) {
+        console.warn('Failed to delete file:', file.path);
+      }
+    });
+  });
+}
+
+// =======================
+// Test Route
+// =======================
 
 app.get('/', (req, res) => {
   res.send('Forum backend is running');
 });
 
-app.get('/users', (req, res) => {
-  db.query('SELECT id, username, created_at FROM users', (err, results) => {
-    if (err) return res.status(500).json(err);
-    res.json(results);
-  });
-});
+// =======================
+// Auth Routes
+// =======================
 
 app.post('/register', (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || username.length > 10) {
-    return res.status(400).json({
-      message: 'Username must be 1-10 characters'
-    });
-  }
-
-  if (!password || password.length < 6) {
-    return res.status(400).json({
-      message: 'Password must be at least 6 characters'
-    });
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Username and password required' });
   }
 
   db.query(
-    'SELECT * FROM users WHERE username = ?',
-    [username],
-    (err, results) => {
-      if (err) return res.status(500).json(err);
+    'INSERT INTO users (username, password) VALUES (?, ?)',
+    [username, password],
+    (err, result) => {
+      if (err) {
+        if (err.code === 'ER_DUP_ENTRY') {
+          return res.status(400).json({ message: 'Username already exists' });
+        }
 
-      if (results.length > 0) {
-        return res.status(400).json({
-          message: 'Username already exists'
-        });
+        console.error(err);
+        return res.status(500).json({ message: 'Register failed' });
       }
 
-      db.query(
-        'INSERT INTO users (username, password) VALUES (?, ?)',
-        [username, password],
-        (err, results) => {
-          if (err) return res.status(500).json(err);
-
-          res.status(201).json({
-            message: 'User registered successfully',
-            userId: results.insertId
-          });
-        }
-      );
+      res.json({ message: 'Registered successfully' });
     }
   );
 });
@@ -82,37 +163,40 @@ app.post('/login', (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
-    return res.status(400).json({
-      message: 'Username and password are required'
-    });
+    return res.status(400).json({ message: 'Username and password required' });
   }
 
   db.query(
     'SELECT * FROM users WHERE username = ? AND password = ?',
     [username, password],
     (err, results) => {
-      if (err) return res.status(500).json(err);
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Login failed' });
+      }
 
       if (results.length === 0) {
-        return res.status(401).json({
-          message: 'Invalid username or password'
-        });
+        return res.status(401).json({ message: 'Invalid username or password' });
       }
 
       const user = results[0];
-      const sessionId = crypto.randomUUID();
+      const sessionId = generateSessionId();
 
       db.query(
-        'INSERT INTO sessions (user_id, session_id) VALUES (?, ?)',
-        [user.id, sessionId],
-        (err) => {
-          if (err) return res.status(500).json(err);
+        'INSERT INTO sessions (session_id, user_id) VALUES (?, ?)',
+        [sessionId, user.id],
+        (err2) => {
+          if (err2) {
+            console.error(err2);
+            return res.status(500).json({ message: 'Failed to create session' });
+          }
 
           res.json({
             message: 'Login successful',
+            sessionId,
             userId: user.id,
             username: user.username,
-            sessionId
+            avatar: user.avatar
           });
         }
       );
@@ -123,147 +207,198 @@ app.post('/login', (req, res) => {
 app.post('/me', (req, res) => {
   const { sessionId } = req.body;
 
-  if (!sessionId) {
-    return res.status(400).json({
-      message: 'sessionId is required'
+  getUserBySession(sessionId, (err, user) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to get user' });
+    }
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid session' });
+    }
+
+    res.json({
+      userId: user.id,
+      username: user.username,
+      avatar: user.avatar
     });
-  }
+  });
+});
 
-  db.query(
-    `SELECT users.id, users.username, users.created_at
-     FROM sessions
-     JOIN users ON sessions.user_id = users.id
-     WHERE sessions.session_id = ?`,
-    [sessionId],
-    (err, results) => {
-      if (err) return res.status(500).json(err);
+app.post('/me/avatar', upload.single('avatar'), (req, res) => {
+  const { sessionId } = req.body;
 
-      if (results.length === 0) {
-        return res.status(401).json({
-          message: 'Invalid session'
+  getUserBySession(sessionId, (err, user) => {
+    if (err) {
+      if (req.file) deleteUploadedFiles([req.file]);
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to upload avatar' });
+    }
+
+    if (!user) {
+      if (req.file) deleteUploadedFiles([req.file]);
+      return res.status(401).json({ message: 'Invalid session' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'Avatar image required' });
+    }
+
+    const avatarPath = `/uploads/${req.file.filename}`;
+
+    // 如果旧头像存在，顺便删掉旧文件
+    if (user.avatar) {
+      const oldAvatarPath = path.join(__dirname, user.avatar);
+      fs.unlink(oldAvatarPath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.warn('Old avatar delete failed:', oldAvatarPath);
+        }
+      });
+    }
+
+    db.query(
+      'UPDATE users SET avatar = ? WHERE id = ?',
+      [avatarPath, user.id],
+      (err2) => {
+        if (err2) {
+          deleteUploadedFiles([req.file]);
+          console.error(err2);
+          return res.status(500).json({ message: 'Failed to save avatar' });
+        }
+
+        res.json({
+          message: 'Avatar updated',
+          avatar: avatarPath
         });
       }
-
-      res.json(results[0]);
-    }
-  );
+    );
+  });
 });
+// =======================
+// Posts Routes
+// =======================
 
 app.get('/posts', (req, res) => {
   db.query(
-    `SELECT posts.id, posts.user_id, users.username, posts.title, posts.content, posts.created_at
-     FROM posts
-     JOIN users ON posts.user_id = users.id
-     ORDER BY posts.created_at DESC`,
+    `
+    SELECT posts.*, users.username
+    FROM posts
+    JOIN users ON posts.user_id = users.id
+    ORDER BY posts.created_at DESC
+    `,
     (err, results) => {
-      if (err) return res.status(500).json(err);
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Failed to load posts' });
+      }
+
       res.json(results);
     }
   );
 });
 
-app.get('/posts/:id', (req, res) => {
-  const postId = req.params.id;
-
-  db.query(
-    `SELECT posts.id, posts.user_id, users.username, posts.title, posts.content, posts.created_at
-     FROM posts
-     JOIN users ON posts.user_id = users.id
-     WHERE posts.id = ?`,
-    [postId],
-    (err, results) => {
-      if (err) return res.status(500).json(err);
-
-      if (results.length === 0) {
-        return res.status(404).json({
-          message: 'Post not found'
-        });
-      }
-
-      res.json(results[0]);
-    }
-  );
-});
-
-app.post('/posts', (req, res) => {
+app.post('/posts', upload.array('images', 3), (req, res) => {
   const { sessionId, title, content } = req.body;
 
   if (!sessionId || !title || !content) {
-    return res.status(400).json({
-      message: 'sessionId, title and content are required'
-    });
+    deleteUploadedFiles(req.files);
+    return res.status(400).json({ message: 'Missing fields' });
   }
 
-  getUserBySession(sessionId, (err, userId) => {
-    if (err) return res.status(500).json(err);
-
-    if (!userId) {
-      return res.status(401).json({
-        message: 'Invalid session'
-      });
+  getUserBySession(sessionId, (err, user) => {
+    if (err) {
+      deleteUploadedFiles(req.files);
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to create post' });
     }
 
-    db.query(
-      'INSERT INTO posts (user_id, title, content) VALUES (?, ?, ?)',
-      [userId, title, content],
-      (err, results) => {
-        if (err) return res.status(500).json(err);
+    if (!user) {
+      deleteUploadedFiles(req.files);
+      return res.status(401).json({ message: 'Invalid session' });
+    }
 
-        res.status(201).json({
-          message: 'Post created successfully',
-          postId: results.insertId
+    const imagePaths = req.files.map(file => `/uploads/${file.filename}`);
+
+    db.query(
+      'INSERT INTO posts (user_id, title, content, images) VALUES (?, ?, ?, ?)',
+      [user.id, title, content, JSON.stringify(imagePaths)],
+      (err2, result) => {
+        if (err2) {
+          deleteUploadedFiles(req.files);
+          console.error(err2);
+          return res.status(500).json({ message: 'Failed to create post' });
+        }
+
+        res.json({
+          message: 'Post created',
+          postId: result.insertId,
+          images: imagePaths
         });
       }
     );
   });
 });
 
-app.put('/posts/:id', (req, res) => {
+app.put('/posts/:id', upload.array('images', 3), (req, res) => {
   const postId = req.params.id;
   const { sessionId, title, content } = req.body;
 
   if (!sessionId || !title || !content) {
-    return res.status(400).json({
-      message: 'sessionId, title and content are required'
-    });
+    deleteUploadedFiles(req.files);
+    return res.status(400).json({ message: 'Missing fields' });
   }
 
-  getUserBySession(sessionId, (err, userId) => {
-    if (err) return res.status(500).json(err);
+  getUserBySession(sessionId, (err, user) => {
+    if (err) {
+      deleteUploadedFiles(req.files);
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to edit post' });
+    }
 
-    if (!userId) {
-      return res.status(401).json({
-        message: 'Invalid session'
-      });
+    if (!user) {
+      deleteUploadedFiles(req.files);
+      return res.status(401).json({ message: 'Invalid session' });
     }
 
     db.query(
       'SELECT * FROM posts WHERE id = ?',
       [postId],
-      (err, results) => {
-        if (err) return res.status(500).json(err);
-
-        if (results.length === 0) {
-          return res.status(404).json({
-            message: 'Post not found'
-          });
+      (err2, results) => {
+        if (err2) {
+          deleteUploadedFiles(req.files);
+          console.error(err2);
+          return res.status(500).json({ message: 'Failed to find post' });
         }
 
-        if (results[0].user_id !== userId) {
-          return res.status(403).json({
-            message: 'You can only edit your own posts'
-          });
+        if (results.length === 0) {
+          deleteUploadedFiles(req.files);
+          return res.status(404).json({ message: 'Post not found' });
+        }
+
+        const post = results[0];
+
+        if (Number(post.user_id) !== Number(user.id)) {
+          deleteUploadedFiles(req.files);
+          return res.status(403).json({ message: 'You can only edit your own post' });
+        }
+
+        let newImages = post.images || '[]';
+
+        if (req.files && req.files.length > 0) {
+          const imagePaths = req.files.map(file => `/uploads/${file.filename}`);
+          newImages = JSON.stringify(imagePaths);
         }
 
         db.query(
-          'UPDATE posts SET title = ?, content = ? WHERE id = ?',
-          [title, content, postId],
-          (err) => {
-            if (err) return res.status(500).json(err);
+          'UPDATE posts SET title = ?, content = ?, images = ? WHERE id = ?',
+          [title, content, newImages, postId],
+          (err3) => {
+            if (err3) {
+              console.error(err3);
+              return res.status(500).json({ message: 'Failed to update post' });
+            }
 
-            res.json({
-              message: 'Post updated successfully'
-            });
+            res.json({ message: 'Post updated' });
           }
         );
       }
@@ -275,48 +410,45 @@ app.delete('/posts/:id', (req, res) => {
   const postId = req.params.id;
   const { sessionId } = req.body;
 
-  if (!sessionId) {
-    return res.status(400).json({
-      message: 'sessionId is required'
-    });
-  }
+  getUserBySession(sessionId, (err, user) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to delete post' });
+    }
 
-  getUserBySession(sessionId, (err, userId) => {
-    if (err) return res.status(500).json(err);
-
-    if (!userId) {
-      return res.status(401).json({
-        message: 'Invalid session'
-      });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid session' });
     }
 
     db.query(
       'SELECT * FROM posts WHERE id = ?',
       [postId],
-      (err, results) => {
-        if (err) return res.status(500).json(err);
-
-        if (results.length === 0) {
-          return res.status(404).json({
-            message: 'Post not found'
-          });
+      (err2, results) => {
+        if (err2) {
+          console.error(err2);
+          return res.status(500).json({ message: 'Failed to find post' });
         }
 
-        if (results[0].user_id !== userId) {
-          return res.status(403).json({
-            message: 'You can only delete your own posts'
-          });
+        if (results.length === 0) {
+          return res.status(404).json({ message: 'Post not found' });
+        }
+
+        const post = results[0];
+
+        if (Number(post.user_id) !== Number(user.id)) {
+          return res.status(403).json({ message: 'You can only delete your own post' });
         }
 
         db.query(
           'DELETE FROM posts WHERE id = ?',
           [postId],
-          (err) => {
-            if (err) return res.status(500).json(err);
+          (err3) => {
+            if (err3) {
+              console.error(err3);
+              return res.status(500).json({ message: 'Failed to delete post' });
+            }
 
-            res.json({
-              message: 'Post deleted successfully'
-            });
+            res.json({ message: 'Post deleted' });
           }
         );
       }
@@ -324,33 +456,111 @@ app.delete('/posts/:id', (req, res) => {
   });
 });
 
-app.get('/comments', (req, res) => {
+// =======================
+// Likes Routes
+// =======================
+
+app.get('/posts/:id/likes', (req, res) => {
+  const postId = req.params.id;
+
   db.query(
-    `SELECT comments.id, comments.post_id, comments.user_id, users.username,
-            comments.content, comments.created_at
-     FROM comments
-     JOIN users ON comments.user_id = users.id
-     ORDER BY comments.created_at DESC`,
+    'SELECT COUNT(*) AS count FROM likes WHERE post_id = ?',
+    [postId],
     (err, results) => {
-      if (err) return res.status(500).json(err);
-      res.json(results);
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Failed to get likes' });
+      }
+
+      res.json({ count: results[0].count });
     }
   );
 });
+
+app.post('/posts/:id/like', (req, res) => {
+  const postId = req.params.id;
+  const { sessionId } = req.body;
+
+  getUserBySession(sessionId, (err, user) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to like post' });
+    }
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid session' });
+    }
+
+    db.query(
+      'INSERT INTO likes (post_id, user_id) VALUES (?, ?)',
+      [postId, user.id],
+      (err2) => {
+        if (err2) {
+          if (err2.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ message: 'Already liked' });
+          }
+
+          console.error(err2);
+          return res.status(500).json({ message: 'Failed to like post' });
+        }
+
+        res.json({ message: 'Liked' });
+      }
+    );
+  });
+});
+
+app.delete('/posts/:id/like', (req, res) => {
+  const postId = req.params.id;
+  const { sessionId } = req.body;
+
+  getUserBySession(sessionId, (err, user) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to unlike post' });
+    }
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid session' });
+    }
+
+    db.query(
+      'DELETE FROM likes WHERE post_id = ? AND user_id = ?',
+      [postId, user.id],
+      (err2) => {
+        if (err2) {
+          console.error(err2);
+          return res.status(500).json({ message: 'Failed to unlike post' });
+        }
+
+        res.json({ message: 'Unliked' });
+      }
+    );
+  });
+});
+
+// =======================
+// Comments Routes
+// =======================
 
 app.get('/posts/:id/comments', (req, res) => {
   const postId = req.params.id;
 
   db.query(
-    `SELECT comments.id, comments.post_id, comments.user_id, users.username,
-            comments.content, comments.created_at
-     FROM comments
-     JOIN users ON comments.user_id = users.id
-     WHERE comments.post_id = ?
-     ORDER BY comments.created_at ASC`,
+    `
+    SELECT comments.*, users.username
+    FROM comments
+    JOIN users ON comments.user_id = users.id
+    WHERE comments.post_id = ?
+    ORDER BY comments.created_at ASC
+    `,
     [postId],
     (err, results) => {
-      if (err) return res.status(500).json(err);
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Failed to load comments' });
+      }
+
       res.json(results);
     }
   );
@@ -360,29 +570,31 @@ app.post('/comments', (req, res) => {
   const { sessionId, postId, content } = req.body;
 
   if (!sessionId || !postId || !content) {
-    return res.status(400).json({
-      message: 'sessionId, postId and content are required'
-    });
+    return res.status(400).json({ message: 'Missing fields' });
   }
 
-  getUserBySession(sessionId, (err, userId) => {
-    if (err) return res.status(500).json(err);
+  getUserBySession(sessionId, (err, user) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to comment' });
+    }
 
-    if (!userId) {
-      return res.status(401).json({
-        message: 'Invalid session'
-      });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid session' });
     }
 
     db.query(
       'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
-      [postId, userId, content],
-      (err, results) => {
-        if (err) return res.status(500).json(err);
+      [postId, user.id, content],
+      (err2, result) => {
+        if (err2) {
+          console.error(err2);
+          return res.status(500).json({ message: 'Failed to add comment' });
+        }
 
-        res.status(201).json({
-          message: 'Comment created successfully',
-          commentId: results.insertId
+        res.json({
+          message: 'Comment added',
+          commentId: result.insertId
         });
       }
     );
@@ -393,129 +605,204 @@ app.delete('/comments/:id', (req, res) => {
   const commentId = req.params.id;
   const { sessionId } = req.body;
 
-  if (!sessionId) {
-    return res.status(400).json({
-      message: 'sessionId is required'
-    });
-  }
+  getUserBySession(sessionId, (err, user) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to delete comment' });
+    }
 
-  getUserBySession(sessionId, (err, userId) => {
-    if (err) return res.status(500).json(err);
-
-    if (!userId) {
-      return res.status(401).json({
-        message: 'Invalid session'
-      });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid session' });
     }
 
     db.query(
       'SELECT * FROM comments WHERE id = ?',
       [commentId],
-      (err, results) => {
-        if (err) return res.status(500).json(err);
-
-        if (results.length === 0) {
-          return res.status(404).json({
-            message: 'Comment not found'
-          });
+      (err2, results) => {
+        if (err2) {
+          console.error(err2);
+          return res.status(500).json({ message: 'Failed to find comment' });
         }
 
-        if (results[0].user_id !== userId) {
-          return res.status(403).json({
-            message: 'You can only delete your own comments'
-          });
+        if (results.length === 0) {
+          return res.status(404).json({ message: 'Comment not found' });
+        }
+
+        const comment = results[0];
+
+        if (Number(comment.user_id) !== Number(user.id)) {
+          return res.status(403).json({ message: 'You can only delete your own comment' });
         }
 
         db.query(
           'DELETE FROM comments WHERE id = ?',
           [commentId],
-          (err) => {
-            if (err) return res.status(500).json(err);
+          (err3) => {
+            if (err3) {
+              console.error(err3);
+              return res.status(500).json({ message: 'Failed to delete comment' });
+            }
 
-            res.json({
-              message: 'Comment deleted successfully'
-            });
+            res.json({ message: 'Comment deleted' });
           }
         );
       }
     );
   });
-}); 
-
-app.post('/posts/:id/like', (req, res) => {
-  const { sessionId } = req.body;
-  const postId = req.params.id;
-
-  getUserBySession(sessionId, (err, userId) => {
-    if (err) return res.status(500).json(err);
-
-    if (!userId) {
-      return res.status(401).json({
-        message: 'Invalid session'
-      });
-    }
-
-    db.query(
-      'INSERT INTO likes (user_id, post_id) VALUES (?, ?)',
-      [userId, postId],
-      (err) => {
-        if (err) {
-          return res.status(400).json({
-            message: 'Already liked'
-          });
-        }
-
-        res.json({
-          message: 'Liked'
-        });
-      }
-    );
-  });
 });
 
-app.get('/posts/:id/likes', (req, res) => {
-  const postId = req.params.id;
+// =======================
+// Kitchen Routes
+// =======================
 
+app.get('/kitchen', (req, res) => {
   db.query(
-    'SELECT COUNT(*) AS likes FROM likes WHERE post_id = ?',
-    [postId],
+    `
+    SELECT kitchen.*, users.username
+    FROM kitchen
+    JOIN users ON kitchen.user_id = users.id
+    ORDER BY kitchen.created_at DESC
+    `,
     (err, results) => {
-      if (err) return res.status(500).json(err);
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Failed to load kitchen' });
+      }
 
-      res.json(results[0]);
+      const formatted = results.map(item => {
+        let images = [];
+
+        try {
+          images = item.images ? JSON.parse(item.images) : [];
+        } catch (e) {
+          images = [];
+        }
+
+        return {
+          ...item,
+          images
+        };
+      });
+
+      res.json(formatted);
     }
   );
 });
 
-app.delete('/posts/:id/like', (req, res) => {
-  const { sessionId } = req.body;
-  const postId = req.params.id;
+app.post('/kitchen', upload.array('images', 10), (req, res) => {
+  const { sessionId, title, link } = req.body;
 
-  getUserBySession(sessionId, (err, userId) => {
-    if (err) return res.status(500).json(err);
+  if (!sessionId || !title) {
+    deleteUploadedFiles(req.files);
+    return res.status(400).json({ message: 'Title required' });
+  }
 
-    if (!userId) {
-      return res.status(401).json({
-        message: 'Invalid session'
-      });
+  getUserBySession(sessionId, (err, user) => {
+    if (err) {
+      deleteUploadedFiles(req.files);
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to create kitchen item' });
     }
 
+    if (!user) {
+      deleteUploadedFiles(req.files);
+      return res.status(401).json({ message: 'Invalid session' });
+    }
+
+    const imagePaths = req.files.map(file => `/uploads/${file.filename}`);
+
     db.query(
-      'DELETE FROM likes WHERE user_id = ? AND post_id = ?',
-      [userId, postId],
-      (err) => {
-        if (err) {
-          return res.status(500).json(err);
+      'INSERT INTO kitchen (user_id, title, link, images) VALUES (?, ?, ?, ?)',
+      [user.id, title, link || '', JSON.stringify(imagePaths)],
+      (err2, result) => {
+        if (err2) {
+          deleteUploadedFiles(req.files);
+          console.error(err2);
+          return res.status(500).json({ message: 'Failed to create kitchen item' });
         }
 
         res.json({
-          message: 'Unliked'
+          message: 'Kitchen item created',
+          itemId: result.insertId,
+          images: imagePaths
         });
       }
     );
   });
 });
 
-app.listen(3000, () => {
-  console.log('Server is running on http://localhost:3000');
+app.delete('/kitchen/:id', (req, res) => {
+  const itemId = req.params.id;
+  const { sessionId } = req.body;
+
+  getUserBySession(sessionId, (err, user) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to delete kitchen item' });
+    }
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid session' });
+    }
+
+    db.query(
+      'SELECT * FROM kitchen WHERE id = ?',
+      [itemId],
+      (err2, results) => {
+        if (err2) {
+          console.error(err2);
+          return res.status(500).json({ message: 'Failed to find kitchen item' });
+        }
+
+        if (results.length === 0) {
+          return res.status(404).json({ message: 'Kitchen item not found' });
+        }
+
+        const item = results[0];
+
+        if (Number(item.user_id) !== Number(user.id)) {
+          return res.status(403).json({ message: 'You can only delete your own kitchen item' });
+        }
+
+        db.query(
+          'DELETE FROM kitchen WHERE id = ?',
+          [itemId],
+          (err3) => {
+            if (err3) {
+              console.error(err3);
+              return res.status(500).json({ message: 'Failed to delete kitchen item' });
+            }
+
+            res.json({ message: 'Kitchen item deleted' });
+          }
+        );
+      }
+    );
+  });
+});
+
+// =======================
+// Error Handler
+// =======================
+
+app.use((err, req, res, next) => {
+  console.error(err);
+
+  if (err.message === 'Only image files are allowed') {
+    return res.status(400).json({ message: 'Only image files are allowed' });
+  }
+
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ message: 'File too large. Max 5MB' });
+  }
+
+  res.status(500).json({ message: 'Server error' });
+});
+
+// =======================
+// Start Server
+// =======================
+
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });

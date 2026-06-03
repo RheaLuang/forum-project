@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FILLED WITH LOVE</title>
     <style>
-        /* Le Labo Inspired Style */
         :root {
             --bg-color: #ffffff;
             --text-main: #000000;
@@ -13,75 +12,19 @@
             --border-color: #e5e5e5;
             --font-stack: "Helvetica Neue", Helvetica, Arial, sans-serif;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            font-family: var(--font-stack);
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            line-height: 1.5;
-            font-size: 14px;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .container {
-            max-width: 700px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
+        body { font-family: var(--font-stack); background-color: var(--bg-color); color: var(--text-main); line-height: 1.5; font-size: 14px; }
+        .container { max-width: 700px; margin: 0 auto; padding: 40px 20px; min-height: 100vh; display: flex; flex-direction: column; }
+        
         /* Header */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 30px;
-        }
-
-        .brand {
-            font-weight: 700;
-            font-size: 16px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 20px;
-        }
-
-        .nav-item {
-            cursor: pointer;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 1px;
-            color: var(--text-sub);
-            transition: color 0.2s;
-        }
-
-        .nav-item:hover, .nav-item.active {
-            color: var(--text-main);
-            font-weight: 600;
-        }
-
-        .user-profile {
-            cursor: pointer;
-            font-size: 11px;
-            text-transform: uppercase;
-            border: 1px solid var(--border-color);
-            padding: 6px 12px;
-            letter-spacing: 1px;
-        }
-
-        .user-profile:hover {
-            background-color: #f9f9f9;
-        }
+        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 30px; }
+        .brand { font-weight: 700; font-size: 16px; letter-spacing: 2px; text-transform: uppercase; }
+        .nav-links { display: flex; gap: 20px; }
+        .nav-item { cursor: pointer; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; color: var(--text-sub); transition: color 0.2s; }
+        .nav-item:hover, .nav-item.active { color: var(--text-main); font-weight: 600; }
+        
+        .user-profile { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 11px; text-transform: uppercase; border: 1px solid var(--border-color); padding: 4px 10px; }
+        .avatar-small { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: #eee; }
 
         /* Sections */
         .section { display: none; }
@@ -89,114 +32,26 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         /* Forms */
-        input, textarea {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 0;
-            font-family: var(--font-stack);
-            font-size: 13px;
-            outline: none;
-        }
-
+        input, textarea, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 0; font-family: var(--font-stack); font-size: 13px; outline: none; }
         input:focus, textarea:focus { border-color: var(--text-main); }
-
-        button {
-            background-color: var(--text-main);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            cursor: pointer;
-        }
-
+        button { background-color: var(--text-main); color: white; border: none; padding: 10px 20px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
         button:hover { opacity: 0.8; }
+        button.secondary { background-color: transparent; color: var(--text-main); border: 1px solid var(--border-color); }
         
-        button.secondary {
-            background-color: transparent;
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-        }
-
-        /* Posts */
-        .post-card {
-            margin-bottom: 40px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-            position: relative;
-        }
-
-        .post-meta {
-            font-size: 10px;
-            color: var(--text-sub);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .post-title {
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .post-content {
-            font-size: 14px;
-            color: #333;
-            white-space: pre-wrap;
-            margin-bottom: 15px;
-            line-height: 1.6;
-        }
-
-        /* Action Bar */
-        .action-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 20px;
-            padding-top: 10px;
-            border-top: 1px solid #f9f9f9;
-        }
-
-        .action-left, .action-right {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .text-btn {
-            background: none;
-            border: none;
-            color: var(--text-sub);
-            font-size: 11px;
-            text-transform: uppercase;
-            cursor: pointer;
-            padding: 0;
-            letter-spacing: 0.5px;
-        }
-
+        /* Posts & Items */
+        .card { margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); position: relative; }
+        .card-meta { font-size: 10px; color: var(--text-sub); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; }
+        .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; }
+        .card-content { font-size: 14px; color: #333; white-space: pre-wrap; margin-bottom: 15px; }
+        
+        .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 5px; margin-top: 10px; }
+        .image-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid #eee; }
+        
+        .action-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid #f9f9f9; }
+        .text-btn { background: none; border: none; color: var(--text-sub); font-size: 11px; text-transform: uppercase; cursor: pointer; padding: 0; }
         .text-btn:hover { color: var(--text-main); text-decoration: underline; }
-        
-        .like-btn {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            color: var(--text-sub);
-        }
-        
-        .like-btn.liked {
-            color: #000;
-            font-weight: bold;
-        }
-
-        .edit-btn { color: var(--text-sub); }
-        .delete-btn { color: #999; }
         .delete-btn:hover { color: red; }
+        .like-btn { display: flex; align-items: center; gap: 4px; }
 
         /* Edit Mode */
         .edit-mode { display: none; margin-top: 10px; }
@@ -204,54 +59,20 @@
         .view-mode.hidden { display: none; }
 
         /* Comments */
-        .comments-area {
-            margin-top: 20px;
-            padding-left: 15px;
-            border-left: 1px solid var(--border-color);
-            display: none;
-        }
+        .comments-area { display: none; margin-top: 15px; padding-left: 15px; border-left: 2px solid #eee; }
         .comments-area.active { display: block; }
+        .comment { font-size: 12px; margin-bottom: 5px; color: var(--text-sub); }
+        .comment strong { color: var(--text-main); font-weight: 600; text-transform: uppercase; font-size: 10px; margin-right: 5px; }
 
-        .comment {
-            font-size: 12px;
-            margin-bottom: 10px;
-            color: var(--text-sub);
-        }
-        .comment strong { 
-            color: var(--text-main); 
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 10px;
-            margin-right: 5px;
-        }
+        /* Image Upload Preview */
+        .upload-preview { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .preview-item { position: relative; width: 60px; height: 60px; }
+        .preview-item img { width: 100%; height: 100%; object-fit: cover; border: 1px solid #ccc; }
+        .preview-remove { position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; width: 15px; height: 15px; text-align: center; line-height: 15px; font-size: 10px; cursor: pointer; }
 
         /* Auth Modal */
-        #auth-modal {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.98);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .auth-box {
-            width: 300px;
-            padding: 40px;
-            border: 1px solid var(--border-color);
-            text-align: center;
-        }
-
-        .auth-toggle {
-            margin-top: 20px;
-            font-size: 10px;
-            cursor: pointer;
-            text-decoration: underline;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
+        #auth-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .auth-box { width: 300px; padding: 40px; border: 1px solid var(--border-color); text-align: center; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -260,13 +81,13 @@
     <!-- Auth Modal -->
     <div id="auth-modal">
         <div class="auth-box">
-            <h2 style="margin-bottom: 30px; text-transform: uppercase; font-size: 14px; letter-spacing: 2px;" id="auth-title">Login</h2>
+            <h2 style="margin-bottom: 20px; text-transform: uppercase;" id="auth-title">Login</h2>
             <input type="text" id="username" placeholder="USERNAME">
             <input type="password" id="password" placeholder="PASSWORD">
             <button id="auth-submit" style="width: 100%;">Sign In</button>
             <div id="auth-error" style="color: red; font-size: 10px; margin-top: 10px;"></div>
-            <div class="auth-toggle" id="toggle-auth">Create Account</div>
-            <div class="auth-toggle" onclick="closeAuth()">Close</div>
+            <div class="auth-toggle" id="toggle-auth" style="margin-top:15px; font-size:10px; cursor:pointer; text-decoration:underline;">Create Account</div>
+            <div class="auth-toggle" onclick="closeAuth()" style="margin-top:10px; font-size:10px; cursor:pointer; text-decoration:underline;">Close</div>
         </div>
     </div>
 
@@ -275,77 +96,105 @@
             <div class="brand">FILLED WITH LOVE</div>
             <div style="display: flex; align-items: center; gap: 20px;">
                 <div class="nav-links">
-                    <div class="nav-item active" onclick="switchTab('forum')">Posts</div>
-                    <div class="nav-item" onclick="switchTab('story')">CZ's Story</div>
+                    <div class="nav-item" onclick="switchTab('forum')">Posts</div>
+                    <div class="nav-item active" onclick="switchTab('story')">CZ's Story</div>
                     <div class="nav-item" onclick="switchTab('kitchen')">Kitchen</div>
                 </div>
                 <div id="user-display" class="user-profile" onclick="openAuth()">
-                    Login / Register
+                    <img src="" class="avatar-small hidden" id="header-avatar">
+                    <span id="header-username">Login</span>
                 </div>
             </div>
         </header>
 
         <!-- Tab: Forum -->
-        <div id="tab-forum" class="section active">
-            <div id="create-post-area" class="hidden" style="margin-bottom: 50px; padding: 20px; border: 1px solid var(--border-color);">
-                <h3 style="margin-bottom: 15px; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">New Post</h3>
+        <div id="tab-forum" class="section">
+            <div id="create-post-area" class="hidden" style="margin-bottom: 40px; padding: 20px; border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: 15px; text-transform: uppercase; font-size: 11px;">New Post</h3>
                 <input type="text" id="new-post-title" placeholder="TITLE">
                 <textarea id="new-post-content" rows="4" placeholder="CONTENT"></textarea>
+                
+                <label style="font-size:10px; text-transform:uppercase; color:#666;">Images (Max 3)</label>
+                <input type="file" id="new-post-images" multiple accept="image/*" onchange="handlePostImageSelect(this)">
+                <div class="upload-preview" id="post-image-preview"></div>
+                
                 <button onclick="createPost()">Publish</button>
             </div>
-
-            <div id="posts-container">
-                <!-- Posts injected here -->
-            </div>
+            <div id="posts-container"></div>
         </div>
 
         <!-- Tab: Story -->
-        <div id="tab-story" class="section">
-            <div class="post-card">
-                <div class="post-title">CZ's Little Stories</div>
-                <div class="post-content">
-                    Welcome to the story section.
-                </div>
+        <div id="tab-story" class="section active">
+            <div class="card">
+                <div class="card-title">CZ's Little Stories</div>
+                <div class="card-content">Static content area...</div>
             </div>
         </div>
 
         <!-- Tab: Kitchen -->
         <div id="tab-kitchen" class="section">
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1px; background: #eee; border: 1px solid #eee;">
-                <div style="background:#fff; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:10px;">Artwork 01</div>
-                <div style="background:#fff; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:10px;">Meme Set</div>
+            <div id="create-kitchen-area" class="hidden" style="margin-bottom: 40px; padding: 20px; border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: 15px; text-transform: uppercase; font-size: 11px;">Add to Kitchen</h3>
+                <input type="text" id="kitchen-title" placeholder="TITLE (Required)">
+                <input type="text" id="kitchen-link" placeholder="LINK (Optional)">
+                
+                <label style="font-size:10px; text-transform:uppercase; color:#666;">Images (Max 10)</label>
+                <input type="file" id="kitchen-images" multiple accept="image/*" onchange="handleKitchenImageSelect(this)">
+                <div class="upload-preview" id="kitchen-image-preview"></div>
+                
+                <button onclick="createKitchenItem()">Add Item</button>
             </div>
+            <div id="kitchen-container"></div>
         </div>
     </div>
 
-       <script>
+    <script>
         const API_URL = 'http://localhost:3000';
         let sessionId = localStorage.getItem('sessionId');
         let currentUser = localStorage.getItem('username');
-        let currentUserId = localStorage.getItem('userId'); // 确保这里存的是数字ID
+        let currentUserId = localStorage.getItem('userId');
+        let userAvatar = localStorage.getItem('userAvatar');
         let isLoginMode = true;
+
+        let postFiles = [];
+        let kitchenFiles = [];
 
         function init() {
             updateUI();
             loadPosts();
+            loadKitchen();
+            switchTab('story');
         }
 
         function updateUI() {
-            const userDisplay = document.getElementById('user-display');
-            const createArea = document.getElementById('create-post-area');
+            const usernameEl = document.getElementById('header-username');
+            const avatarEl = document.getElementById('header-avatar');
+            const createPostArea = document.getElementById('create-post-area');
+            const createKitchenArea = document.getElementById('create-kitchen-area');
             
             if (sessionId && currentUser) {
-                userDisplay.innerText = currentUser;
-                createArea.classList.remove('hidden');
+                usernameEl.innerText = currentUser;
+                createPostArea.classList.remove('hidden');
+                createKitchenArea.classList.remove('hidden');
+                
+                if (userAvatar) {
+                    avatarEl.src = API_URL + userAvatar;
+                    avatarEl.classList.remove('hidden');
+                } else {
+                    avatarEl.classList.add('hidden');
+                }
             } else {
-                userDisplay.innerText = 'Login / Register';
-                createArea.classList.add('hidden');
+                usernameEl.innerText = 'Login';
+                createPostArea.classList.add('hidden');
+                createKitchenArea.classList.add('hidden');
+                avatarEl.classList.add('hidden');
             }
         }
 
         window.switchTab = function(tabName) {
             document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
             document.getElementById(`tab-${tabName}`).classList.add('active');
             
             const navItems = document.querySelectorAll('.nav-item');
@@ -354,16 +203,55 @@
             if(tabName === 'kitchen') navItems[2].classList.add('active');
         }
 
-        // --- Auth ---
+        // --- Auth & Avatar ---
         window.openAuth = function() {
             if (sessionId) {
-                if(confirm('Logout?')) logout();
+                const action = confirm("Click OK to Upload Avatar, Cancel to Logout");
+                if (action) {
+                    triggerAvatarUpload();
+                } else {
+                    logout();
+                }
             } else {
                 document.getElementById('auth-modal').style.display = 'flex';
             }
         }
-        window.closeAuth = function() { document.getElementById('auth-modal').style.display = 'none'; }
+        
+        function triggerAvatarUpload() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const formData = new FormData();
+                formData.append('avatar', file);
+                formData.append('sessionId', sessionId);
+                
+                try {
+                    const res = await fetch(`${API_URL}/me/avatar`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        userAvatar = data.avatar;
+                        localStorage.setItem('userAvatar', userAvatar);
+                        updateUI();
+                        alert('Avatar updated!');
+                    } else {
+                        alert(data.message);
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+            input.click();
+        }
 
+        window.closeAuth = function() { document.getElementById('auth-modal').style.display = 'none'; }
+        
         document.getElementById('toggle-auth').addEventListener('click', () => {
             isLoginMode = !isLoginMode;
             document.getElementById('auth-title').innerText = isLoginMode ? 'Login' : 'Register';
@@ -383,23 +271,31 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.message);
 
                 if (isLoginMode) {
                     sessionId = data.sessionId;
                     currentUser = data.username;
-                    currentUserId = data.userId; 
+                    currentUserId = data.userId;
                     
-                    // 强制转换为字符串存储，比较时再转数字，避免类型问题
+                    const meRes = await fetch(`${API_URL}/me`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ sessionId })
+                    });
+                    const meData = await meRes.json();
+                    userAvatar = meData.avatar;
+
                     localStorage.setItem('sessionId', sessionId);
                     localStorage.setItem('username', currentUser);
                     localStorage.setItem('userId', String(currentUserId));
+                    localStorage.setItem('userAvatar', userAvatar || '');
                     
                     closeAuth();
                     updateUI();
                     loadPosts();
+                    loadKitchen();
                 } else {
                     alert('Registered! Please login.');
                     isLoginMode = true;
@@ -415,10 +311,77 @@
             window.location.reload();
         }
 
-        // --- Posts & Likes ---
-        async function loadPosts() {
-            console.log("Current User ID from LocalStorage:", currentUserId); // 调试日志
+        // --- Image Handling Helpers ---
+        function handlePostImageSelect(input) {
+            const files = Array.from(input.files);
+            if (postFiles.length + files.length > 3) {
+                alert('Max 3 images allowed');
+                return;
+            }
+            postFiles = [...postFiles, ...files];
+            renderPostPreviews();
+            input.value = '';
+        }
 
+        function renderPostPreviews() {
+            const container = document.getElementById('post-image-preview');
+            container.innerHTML = '';
+            postFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const div = document.createElement('div');
+                    div.className = 'preview-item';
+                    div.innerHTML = `
+                        <img src="${e.target.result}">
+                        <div class="preview-remove" onclick="removePostImage(${index})">×</div>
+                    `;
+                    container.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        window.removePostImage = function(index) {
+            postFiles.splice(index, 1);
+            renderPostPreviews();
+        }
+
+        function handleKitchenImageSelect(input) {
+            const files = Array.from(input.files);
+            if (kitchenFiles.length + files.length > 10) {
+                alert('Max 10 images allowed');
+                return;
+            }
+            kitchenFiles = [...kitchenFiles, ...files];
+            renderKitchenPreviews();
+            input.value = '';
+        }
+
+        function renderKitchenPreviews() {
+            const container = document.getElementById('kitchen-image-preview');
+            container.innerHTML = '';
+            kitchenFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const div = document.createElement('div');
+                    div.className = 'preview-item';
+                    div.innerHTML = `
+                        <img src="${e.target.result}">
+                        <div class="preview-remove" onclick="removeKitchenImage(${index})">×</div>
+                    `;
+                    container.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        window.removeKitchenImage = function(index) {
+            kitchenFiles.splice(index, 1);
+            renderKitchenPreviews();
+        }
+
+        // --- Posts Logic (With Likes, Comments, Edit) ---
+        async function loadPosts() {
             try {
                 const res = await fetch(`${API_URL}/posts`);
                 const posts = await res.json();
@@ -426,53 +389,61 @@
                 container.innerHTML = '';
 
                 for (const post of posts) {
-                    console.log(`Post ID: ${post.id}, Post User ID: ${post.user_id}, Type: ${typeof post.user_id}`); // 调试日志
+                    const isOwner = currentUserId && (Number(post.user_id) === Number(currentUserId));
+                    
+                    let imagesHtml = '';
+                    if (post.images) {
+                        try {
+                            const imgs = JSON.parse(post.images);
+                            if (imgs && imgs.length > 0) {
+                                imagesHtml = `<div class="image-grid">${imgs.map(src => `<img src="${API_URL}${src}">`).join('')}</div>`;
+                            }
+                        } catch(e) {}
+                    }
 
-                    // Fetch likes count
-                    let likesCount = 0;
+                    let likeCount = 0;
                     try {
                         const likeRes = await fetch(`${API_URL}/posts/${post.id}/likes`);
                         const likeData = await likeRes.json();
-                        likesCount = likeData.likes;
-                    } catch (e) { console.error(e); }
-
-                    // 核心修复：使用数字类型严格比较 ID
-                    // localStorage 取出来的是字符串，post.user_id 可能是数字，所以用 == 宽松比较或都转 Number
-                    const isOwner = currentUserId && (Number(post.user_id) === Number(currentUserId));
-                    
-                    console.log(`Is Owner? ${isOwner}`); // 调试日志
+                        likeCount = likeData.count;
+                    } catch(e) {}
 
                     const div = document.createElement('div');
-                    div.className = 'post-card';
+                    div.className = 'card';
                     div.id = `post-${post.id}`;
                     div.innerHTML = `
-                        <div class="post-meta">${post.username} &mdash; ${new Date(post.created_at).toLocaleDateString()}</div>
+                        <div class="card-meta">
+                            <span>${post.username} &mdash; ${new Date(post.created_at).toLocaleDateString()}</span>
+                        </div>
                         
                         <div class="view-mode">
-                            <div class="post-title">${escapeHtml(post.title)}</div>
-                            <div class="post-content">${escapeHtml(post.content)}</div>
+                            <div class="card-title">${escapeHtml(post.title)}</div>
+                            <div class="card-content">${escapeHtml(post.content)}</div>
+                            ${imagesHtml}
                         </div>
 
                         <div class="edit-mode">
                             <input type="text" class="edit-title" value="${escapeHtml(post.title)}">
                             <textarea class="edit-content" rows="4">${escapeHtml(post.content)}</textarea>
-                            <div style="display:flex; gap:10px;">
+                            <label style="font-size:10px;">Replace Images (Max 3)</label>
+                            <input type="file" class="edit-images" multiple accept="image/*">
+                            <div style="margin-top:10px;">
                                 <button onclick="saveEdit(${post.id})">Save</button>
                                 <button class="secondary" onclick="cancelEdit(${post.id})">Cancel</button>
                             </div>
                         </div>
 
                         <div class="action-bar">
-                            <div class="action-left">
+                            <div style="display:flex; gap:15px; align-items:center;">
                                 <button class="text-btn" onclick="toggleComments(${post.id})">Comments</button>
-                            </div>
-                            <div class="action-right">
                                 <button class="text-btn like-btn" onclick="toggleLike(${post.id}, this)">
-                                    ❤ <span class="like-count">${likesCount}</span>
+                                    ❤ <span class="like-count">${likeCount}</span>
                                 </button>
+                            </div>
+                            <div>
                                 ${isOwner ? `
-                                    <button class="text-btn edit-btn" onclick="enableEdit(${post.id})">[Edit]</button>
-                                    <button class="text-btn delete-btn" onclick="deletePost(${post.id})">[Delete]</button>
+                                    <button class="text-btn edit-btn" onclick="enableEdit(${post.id})">Edit</button>
+                                    <button class="text-btn delete-btn" onclick="deletePost(${post.id})">Delete</button>
                                 ` : ''}
                             </div>
                         </div>
@@ -481,7 +452,7 @@
                             <div id="comments-list-${post.id}"></div>
                             ${sessionId ? `
                                 <div style="margin-top:10px; display:flex;">
-                                    <input type="text" id="comment-input-${post.id}" placeholder="Write..." style="margin-bottom:0;">
+                                    <input type="text" id="comment-input-${post.id}" placeholder="Write a comment..." style="margin-bottom:0;">
                                     <button onclick="addComment(${post.id})" style="padding:0 10px; margin-left:5px;">Send</button>
                                 </div>
                             ` : ''}
@@ -489,9 +460,7 @@
                     `;
                     container.appendChild(div);
                 }
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) { console.error(err); }
         }
 
         async function toggleLike(postId, btnElement) {
@@ -511,65 +480,16 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ sessionId })
                         });
-                    } else {
-                        throw new Error(data.message);
                     }
                 }
 
                 const likeRes = await fetch(`${API_URL}/posts/${postId}/likes`);
                 const likeData = await likeRes.json();
-                btnElement.querySelector('.like-count').innerText = likeData.likes;
+                btnElement.querySelector('.like-count').innerText = likeData.count;
                 
-                btnElement.style.opacity = '0.5';
-                setTimeout(() => btnElement.style.opacity = '1', 200);
-
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
-        async function createPost() {
-            const title = document.getElementById('new-post-title').value;
-            const content = document.getElementById('new-post-content').value;
-            if (!title || !content) return alert('Fill all fields');
-
-            try {
-                const res = await fetch(`${API_URL}/posts`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId, title, content })
-                });
-                if (res.ok) {
-                    document.getElementById('new-post-title').value = '';
-                    document.getElementById('new-post-content').value = '';
-                    loadPosts();
-                } else {
-                    alert((await res.json()).message);
-                }
             } catch (err) { console.error(err); }
         }
 
-        async function deletePost(id) {
-            if (!confirm('Delete this post?')) return;
-            try {
-                const res = await fetch(`${API_URL}/posts/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    loadPosts();
-                } else {
-                    alert(data.message || 'Failed to delete');
-                }
-            } catch (err) {
-                console.error(err);
-                alert(err.message);
-            }
-        }
-
-        // --- Edit Logic ---
         window.enableEdit = function(id) {
             const postEl = document.getElementById(`post-${id}`);
             postEl.querySelector('.view-mode').classList.add('hidden');
@@ -586,27 +506,94 @@
             const postEl = document.getElementById(`post-${id}`);
             const title = postEl.querySelector('.edit-title').value;
             const content = postEl.querySelector('.edit-content').value;
+            const fileInput = postEl.querySelector('.edit-images');
+            
+            const formData = new FormData();
+            formData.append('sessionId', sessionId);
+            formData.append('title', title);
+            formData.append('content', content);
+            
+            if (fileInput.files.length > 0) {
+                Array.from(fileInput.files).forEach(file => {
+                    formData.append('images', file);
+                });
+            }
 
             try {
                 const res = await fetch(`${API_URL}/posts/${id}`, {
                     method: 'PUT',
+                    body: formData
+                });
+                if (res.ok) {
+                    loadPosts();
+                } else {
+                    alert((await res.json()).message);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function createPost() {
+            const title = document.getElementById('new-post-title').value;
+            const content = document.getElementById('new-post-content').value;
+            if (!title || !content) return alert('Fill all fields');
+
+            const formData = new FormData();
+            formData.append('sessionId', sessionId);
+            formData.append('title', title);
+            formData.append('content', content);
+            postFiles.forEach(file => {
+                formData.append('images', file);
+            });
+
+            try {
+                const res = await fetch(`${API_URL}/posts`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (res.ok) {
+                     document.getElementById('new-post-title').value = '';
+                     document.getElementById('new-post-content').value = '';
+                     postFiles = [];
+                     renderPostPreviews();
+
+                    await loadPosts();
+
+                    // 发布完帖子后，继续停留在 Posts 页面
+                    switchTab('forum');
+                } else {
+                    alert((await res.json()).message);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function deletePost(id) {
+            if (!confirm('Delete?')) return;
+            try {
+                const res = await fetch(`${API_URL}/posts/${id}`, {
+                    method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId, title, content })
+                    body: JSON.stringify({ sessionId })
                 });
                 if (res.ok) loadPosts();
                 else alert((await res.json()).message);
             } catch (err) { console.error(err); }
         }
 
-        // --- Comments ---
+        // --- Comments Logic ---
         window.toggleComments = async function(postId) {
             const area = document.getElementById(`comments-${postId}`);
-            area.classList.toggle('active');
             if (area.classList.contains('active')) {
+                area.classList.remove('active');
+            } else {
+                area.classList.add('active');
                 const res = await fetch(`${API_URL}/posts/${postId}/comments`);
                 const comments = await res.json();
                 document.getElementById(`comments-list-${postId}`).innerHTML = comments.map(c => `
-                    <div class="comment"><strong>${c.username}:</strong> ${escapeHtml(c.content)}</div>
+                    <div class="comment">
+                        <strong>${c.username}:</strong> ${escapeHtml(c.content)}
+                        ${currentUserId && Number(c.user_id) === Number(currentUserId) ? 
+                            `<span style="color:red; cursor:pointer; margin-left:5px;" onclick="deleteComment(${c.id}, ${postId})">×</span>` : ''}
+                    </div>
                 `).join('');
             }
         }
@@ -624,6 +611,94 @@
                     input.value = '';
                     toggleComments(postId);
                 }
+            } catch (err) { console.error(err); }
+        }
+
+        window.deleteComment = async function(commentId, postId) {
+            if(!confirm('Delete comment?')) return;
+            try {
+                const res = await fetch(`${API_URL}/comments/${commentId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId })
+                });
+                if (res.ok) toggleComments(postId);
+            } catch (err) { console.error(err); }
+        }
+
+        // --- Kitchen Logic ---
+        async function loadKitchen() {
+            try {
+                const res = await fetch(`${API_URL}/kitchen`);
+                const items = await res.json();
+                const container = document.getElementById('kitchen-container');
+                container.innerHTML = '';
+
+                for (const item of items) {
+                    const isOwner = currentUserId && (Number(item.user_id) === Number(currentUserId));
+                    let imagesHtml = '';
+                    if (item.images && item.images.length > 0) {
+                        imagesHtml = `<div class="image-grid">${item.images.map(src => `<img src="${API_URL}${src}">`).join('')}</div>`;
+                    }
+                    
+                    let linkHtml = item.link ? `<a href="${item.link}" target="_blank" style="font-size:11px; color:#666; text-decoration:underline;">${item.link}</a>` : '';
+
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    div.innerHTML = `
+                        <div class="card-meta">
+                            <span>${item.username}</span>
+                            ${isOwner ? `<button class="text-btn delete-btn" onclick="deleteKitchenItem(${item.id})">Delete</button>` : ''}
+                        </div>
+                        <div class="card-title">${escapeHtml(item.title)}</div>
+                        ${linkHtml}
+                        ${imagesHtml}
+                    `;
+                    container.appendChild(div);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function createKitchenItem() {
+            const title = document.getElementById('kitchen-title').value;
+            const link = document.getElementById('kitchen-link').value;
+            if (!title) return alert('Title required');
+
+            const formData = new FormData();
+            formData.append('sessionId', sessionId);
+            formData.append('title', title);
+            formData.append('link', link);
+            kitchenFiles.forEach(file => {
+                formData.append('images', file);
+            });
+
+            try {
+                const res = await fetch(`${API_URL}/kitchen`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (res.ok) {
+                    document.getElementById('kitchen-title').value = '';
+                    document.getElementById('kitchen-link').value = '';
+                    kitchenFiles = [];
+                    renderKitchenPreviews();
+                    loadKitchen();
+                } else {
+                    alert((await res.json()).message);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function deleteKitchenItem(id) {
+            if (!confirm('Delete this item?')) return;
+            try {
+                const res = await fetch(`${API_URL}/kitchen/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId })
+                });
+                if (res.ok) loadKitchen();
+                else alert((await res.json()).message);
             } catch (err) { console.error(err); }
         }
 
