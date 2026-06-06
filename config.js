@@ -1,5 +1,5 @@
 window.FORUM_CONFIG = {
-  API_URL: window.location.protocol === 'file:'
+  API_URL: window.location.protocol === 'file:' || ['localhost', '127.0.0.1'].includes(window.location.hostname)
     ? 'http://localhost:3000'
-    : window.location.origin
+    : 'https://forum-project-q7xt.onrender.com'
 };
