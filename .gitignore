@@ -2,3 +2,7 @@ node_modules/
 uploads/
 src/uploads/
 .env
+ca.pem
+db/*.dump.sql
+.vscode/
+.vercel/

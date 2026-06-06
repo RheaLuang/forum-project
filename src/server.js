@@ -1,20 +1,41 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
-const mysql = require('mysql2');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { v2: cloudinary } = require('cloudinary');
+const db = require('../db/db');
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
+const publicDir = path.join(__dirname, '..');
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
+});
 
 // =======================
 // Basic Middleware
 // =======================
 
-app.use(cors());
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : null;
+
+app.use(cors({
+  origin: allowedOrigins || true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static(publicDir, {
+  index: false,
+  dotfiles: 'ignore'
+}));
 
 // 让前端可以访问 uploads 里的图片
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -26,38 +47,8 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // =======================
-// MySQL Connection
-// =======================
-
-const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '123456', // 请确认你的密码
-  database: 'forum_db'
-});
-
-db.connect((err) => {
-  if (err) {
-    console.error('MySQL connection failed:', err);
-    return;
-  }
-  console.log('Connected to MySQL forum_db');
-});
-
-// =======================
 // Multer Upload Config
 // =======================
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname);
-    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + ext;
-    cb(null, uniqueName);
-  }
-});
 
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/')) {
@@ -68,7 +59,7 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 }
 });
@@ -96,13 +87,54 @@ function getUserBySession(sessionId, callback) {
   );
 }
 
-function deleteUploadedFiles(files) {
-  if (!files || files.length === 0) return;
-  files.forEach(file => {
-    fs.unlink(file.path, (err) => {
-      if (err) console.warn('Failed to delete file:', file.path);
-    });
+function uploadImage(file, folder) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: `forum-project/${folder}`, resource_type: 'image' },
+      (err, result) => {
+        if (err) return reject(err);
+        resolve({ url: result.secure_url, publicId: result.public_id });
+      }
+    );
+
+    stream.end(file.buffer);
   });
+}
+
+async function uploadImages(files, folder) {
+  const uploaded = [];
+  try {
+    for (const file of files || []) {
+      uploaded.push(await uploadImage(file, folder));
+    }
+    return uploaded;
+  } catch (err) {
+    await deleteCloudinaryImages(uploaded.map(image => image.url));
+    throw err;
+  }
+}
+
+function getCloudinaryPublicId(url) {
+  if (!url || !url.includes('res.cloudinary.com')) return null;
+  const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z0-9]+(?:\?.*)?$/i);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+async function deleteCloudinaryImages(urls) {
+  const publicIds = (urls || []).map(getCloudinaryPublicId).filter(Boolean);
+  await Promise.all(publicIds.map(publicId =>
+    cloudinary.uploader.destroy(publicId).catch(err => {
+      console.warn('Failed to delete Cloudinary image:', publicId, err.message);
+    })
+  ));
+}
+
+function parseImages(value) {
+  try {
+    return value ? JSON.parse(value) : [];
+  } catch (err) {
+    return [];
+  }
 }
 
 // =======================
@@ -110,7 +142,17 @@ function deleteUploadedFiles(files) {
 // =======================
 
 app.get('/', (req, res) => {
-  res.send('Forum backend is running');
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
+
+app.get('/health', (req, res) => {
+  db.query('SELECT 1 AS healthy', (err) => {
+    if (err) {
+      console.error('Health check failed:', err);
+      return res.status(503).json({ status: 'unhealthy' });
+    }
+    res.json({ status: 'ok' });
+  });
 });
 
 // --- Auth ---
@@ -173,29 +215,30 @@ app.post('/me', (req, res) => {
 
 app.post('/me/avatar', upload.single('avatar'), (req, res) => {
   const { sessionId } = req.body;
-  getUserBySession(sessionId, (err, user) => {
+  getUserBySession(sessionId, async (err, user) => {
     if (err) {
-      if (req.file) deleteUploadedFiles([req.file]);
       return res.status(500).json({ message: 'Failed to upload avatar' });
     }
     if (!user) {
-      if (req.file) deleteUploadedFiles([req.file]);
       return res.status(401).json({ message: 'Invalid session' });
     }
     if (!req.file) return res.status(400).json({ message: 'Avatar image required' });
 
-    const avatarPath = `/uploads/${req.file.filename}`;
-    if (user.avatar) {
-      const oldAvatarPath = path.join(__dirname, user.avatar);
-      fs.unlink(oldAvatarPath, () => {});
+    let uploaded;
+    try {
+      [uploaded] = await uploadImages([req.file], 'avatars');
+    } catch (uploadErr) {
+      console.error('Cloudinary avatar upload failed:', uploadErr);
+      return res.status(502).json({ message: 'Failed to upload avatar image' });
     }
 
-    db.query('UPDATE users SET avatar = ? WHERE id = ?', [avatarPath, user.id], (err2) => {
+    db.query('UPDATE users SET avatar = ? WHERE id = ?', [uploaded.url, user.id], async (err2) => {
       if (err2) {
-        deleteUploadedFiles([req.file]);
+        await deleteCloudinaryImages([uploaded.url]);
         return res.status(500).json({ message: 'Failed to save avatar' });
       }
-      res.json({ message: 'Avatar updated', avatar: avatarPath });
+      await deleteCloudinaryImages([user.avatar]);
+      res.json({ message: 'Avatar updated', avatar: uploaded.url });
     });
   });
 });
@@ -222,27 +265,32 @@ app.get('/posts', (req, res) => {
 app.post('/posts', upload.array('images', 3), (req, res) => {
   const { sessionId, title, content } = req.body;
   if (!sessionId || !title || !content) {
-    deleteUploadedFiles(req.files);
     return res.status(400).json({ message: 'Missing fields' });
   }
 
-  getUserBySession(sessionId, (err, user) => {
+  getUserBySession(sessionId, async (err, user) => {
     if (err) {
-      deleteUploadedFiles(req.files);
       return res.status(500).json({ message: 'Failed to create post' });
     }
     if (!user) {
-      deleteUploadedFiles(req.files);
       return res.status(401).json({ message: 'Invalid session' });
     }
 
-    const imagePaths = req.files.map(file => `/uploads/${file.filename}`);
+    let uploadedImages;
+    try {
+      uploadedImages = await uploadImages(req.files, 'posts');
+    } catch (uploadErr) {
+      console.error('Cloudinary post upload failed:', uploadErr);
+      return res.status(502).json({ message: 'Failed to upload post images' });
+    }
+
+    const imagePaths = uploadedImages.map(image => image.url);
     db.query(
       'INSERT INTO posts (user_id, title, content, images) VALUES (?, ?, ?, ?)',
       [user.id, title, content, JSON.stringify(imagePaths)],
-      (err2, result) => {
+      async (err2, result) => {
         if (err2) {
-          deleteUploadedFiles(req.files);
+          await deleteCloudinaryImages(imagePaths);
           return res.status(500).json({ message: 'Failed to create post' });
         }
         res.json({ message: 'Post created', postId: result.insertId, images: imagePaths });
@@ -255,43 +303,49 @@ app.put('/posts/:id', upload.array('images', 3), (req, res) => {
   const postId = req.params.id;
   const { sessionId, title, content } = req.body;
   if (!sessionId || !title || !content) {
-    deleteUploadedFiles(req.files);
     return res.status(400).json({ message: 'Missing fields' });
   }
 
   getUserBySession(sessionId, (err, user) => {
     if (err) {
-      deleteUploadedFiles(req.files);
       return res.status(500).json({ message: 'Failed to edit post' });
     }
     if (!user) {
-      deleteUploadedFiles(req.files);
       return res.status(401).json({ message: 'Invalid session' });
     }
 
-    db.query('SELECT * FROM posts WHERE id = ?', [postId], (err2, results) => {
+    db.query('SELECT * FROM posts WHERE id = ?', [postId], async (err2, results) => {
       if (err2) {
-        deleteUploadedFiles(req.files);
         return res.status(500).json({ message: 'Failed to find post' });
       }
       if (results.length === 0) {
-        deleteUploadedFiles(req.files);
         return res.status(404).json({ message: 'Post not found' });
       }
       const post = results[0];
       if (Number(post.user_id) !== Number(user.id)) {
-        deleteUploadedFiles(req.files);
         return res.status(403).json({ message: 'You can only edit your own post' });
       }
 
       let newImages = post.images || '[]';
+      let newImageUrls = [];
+      const oldImageUrls = parseImages(post.images);
       if (req.files && req.files.length > 0) {
-        const imagePaths = req.files.map(file => `/uploads/${file.filename}`);
-        newImages = JSON.stringify(imagePaths);
+        try {
+          const uploadedImages = await uploadImages(req.files, 'posts');
+          newImageUrls = uploadedImages.map(image => image.url);
+          newImages = JSON.stringify(newImageUrls);
+        } catch (uploadErr) {
+          console.error('Cloudinary post upload failed:', uploadErr);
+          return res.status(502).json({ message: 'Failed to upload post images' });
+        }
       }
 
-      db.query('UPDATE posts SET title = ?, content = ?, images = ? WHERE id = ?', [title, content, newImages, postId], (err3) => {
-        if (err3) return res.status(500).json({ message: 'Failed to update post' });
+      db.query('UPDATE posts SET title = ?, content = ?, images = ? WHERE id = ?', [title, content, newImages, postId], async (err3) => {
+        if (err3) {
+          await deleteCloudinaryImages(newImageUrls);
+          return res.status(500).json({ message: 'Failed to update post' });
+        }
+        if (newImageUrls.length > 0) await deleteCloudinaryImages(oldImageUrls);
         res.json({ message: 'Post updated' });
       });
     });
@@ -312,8 +366,9 @@ app.delete('/posts/:id', (req, res) => {
       const post = results[0];
       if (Number(post.user_id) !== Number(user.id)) return res.status(403).json({ message: 'You can only delete your own post' });
 
-      db.query('DELETE FROM posts WHERE id = ?', [postId], (err3) => {
+      db.query('DELETE FROM posts WHERE id = ?', [postId], async (err3) => {
         if (err3) return res.status(500).json({ message: 'Failed to delete post' });
+        await deleteCloudinaryImages(parseImages(post.images));
         res.json({ message: 'Post deleted' });
       });
     });
@@ -432,27 +487,32 @@ app.get('/kitchen', (req, res) => {
 app.post('/kitchen', upload.array('images', 10), (req, res) => {
   const { sessionId, title, link } = req.body;
   if (!sessionId || !title) {
-    deleteUploadedFiles(req.files);
     return res.status(400).json({ message: 'Title required' });
   }
 
-  getUserBySession(sessionId, (err, user) => {
+  getUserBySession(sessionId, async (err, user) => {
     if (err) {
-      deleteUploadedFiles(req.files);
       return res.status(500).json({ message: 'Failed to create kitchen item' });
     }
     if (!user) {
-      deleteUploadedFiles(req.files);
       return res.status(401).json({ message: 'Invalid session' });
     }
 
-    const imagePaths = req.files.map(file => `/uploads/${file.filename}`);
+    let uploadedImages;
+    try {
+      uploadedImages = await uploadImages(req.files, 'kitchen');
+    } catch (uploadErr) {
+      console.error('Cloudinary kitchen upload failed:', uploadErr);
+      return res.status(502).json({ message: 'Failed to upload kitchen images' });
+    }
+
+    const imagePaths = uploadedImages.map(image => image.url);
     db.query(
       'INSERT INTO kitchen (user_id, title, link, images) VALUES (?, ?, ?, ?)',
       [user.id, title, link || '', JSON.stringify(imagePaths)],
-      (err2, result) => {
+      async (err2, result) => {
         if (err2) {
-          deleteUploadedFiles(req.files);
+          await deleteCloudinaryImages(imagePaths);
           return res.status(500).json({ message: 'Failed to create kitchen item' });
         }
         res.json({ message: 'Kitchen item created', itemId: result.insertId, images: imagePaths });
@@ -475,8 +535,9 @@ app.delete('/kitchen/:id', (req, res) => {
       const item = results[0];
       if (Number(item.user_id) !== Number(user.id)) return res.status(403).json({ message: 'You can only delete your own kitchen item' });
 
-      db.query('DELETE FROM kitchen WHERE id = ?', [itemId], (err3) => {
+      db.query('DELETE FROM kitchen WHERE id = ?', [itemId], async (err3) => {
         if (err3) return res.status(500).json({ message: 'Failed to delete kitchen item' });
+        await deleteCloudinaryImages(parseImages(item.images));
         res.json({ message: 'Kitchen item deleted' });
       });
     });
@@ -491,6 +552,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+db.getConnection((err, connection) => {
+  if (err) {
+    console.error('MySQL connection failed:', err);
+    process.exit(1);
+  }
+
+  connection.release();
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
 });

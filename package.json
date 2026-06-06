@@ -2,14 +2,20 @@
   "name": "forum-project",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:test": "node db/test-connection.js",
+    "test:app": "node tests/app-smoke.js",
+    "test:uploads": "node tests/cloudinary-smoke.js",
+    "test": "node --check src/server.js && node --check db/db.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cloudinary": "^2.10.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
