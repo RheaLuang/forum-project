@@ -9,10 +9,12 @@ function getSslConfig() {
     return undefined;
   }
 
+  const rejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false';
+
   if (process.env.DB_CA) {
     return {
       ca: process.env.DB_CA.replace(/\\n/g, '\n'),
-      rejectUnauthorized: true
+      rejectUnauthorized
     };
   }
 
@@ -20,11 +22,11 @@ function getSslConfig() {
     const caPath = path.resolve(process.cwd(), process.env.DB_CA_PATH);
     return {
       ca: fs.readFileSync(caPath),
-      rejectUnauthorized: true
+      rejectUnauthorized
     };
   }
 
-  return { rejectUnauthorized: true };
+  return { rejectUnauthorized };
 }
 
 const pool = mysql.createPool({

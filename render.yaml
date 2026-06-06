@@ -22,8 +22,8 @@ services:
         sync: false
       - key: DB_SSL
         value: "true"
-      - key: DB_CA
-        sync: false
+      - key: DB_SSL_REJECT_UNAUTHORIZED
+        value: "false"
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
