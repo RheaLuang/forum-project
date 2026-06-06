@@ -14,10 +14,20 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: var(--font-stack); background-color: var(--bg-color); color: var(--text-main); line-height: 1.5; font-size: 14px; }
-        .container { max-width: 700px; margin: 0 auto; padding: 40px 20px; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        /* 【修改点】自适应容器宽度 */
+        .container { 
+            width: 95%; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            padding: 40px 20px; 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+        }
         
         /* Header */
-        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 30px; }
+        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 30px; flex-wrap: wrap; gap: 10px; }
         .brand { font-weight: 700; font-size: 16px; letter-spacing: 2px; text-transform: uppercase; }
         .nav-links { display: flex; gap: 20px; }
         .nav-item { cursor: pointer; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; color: var(--text-sub); transition: color 0.2s; }
@@ -40,14 +50,19 @@
         
         /* Posts & Items */
         .card { margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); position: relative; }
-        .card-meta { font-size: 10px; color: var(--text-sub); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; }
+        
+        /* 【修改点】帖子头部包含头像 */
+        .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .post-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #f0f0f0; border: 1px solid #eee; }
+        
+        .card-meta { font-size: 10px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; }
         .card-content { font-size: 14px; color: #333; white-space: pre-wrap; margin-bottom: 15px; }
         
         .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 5px; margin-top: 10px; }
         .image-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid #eee; }
         
-        .action-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid #f9f9f9; }
+        .action-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid #f9f9f9; flex-wrap: wrap; gap: 10px; }
         .text-btn { background: none; border: none; color: var(--text-sub); font-size: 11px; text-transform: uppercase; cursor: pointer; padding: 0; }
         .text-btn:hover { color: var(--text-main); text-decoration: underline; }
         .delete-btn:hover { color: red; }
@@ -72,8 +87,17 @@
 
         /* Auth Modal */
         #auth-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .auth-box { width: 300px; padding: 40px; border: 1px solid var(--border-color); text-align: center; }
+        .auth-box { width: 300px; max-width: 90%; padding: 40px; border: 1px solid var(--border-color); text-align: center; }
         .hidden { display: none !important; }
+
+        /* Mobile Adjustments */
+        @media (max-width: 600px) {
+            .container { padding: 20px 15px; }
+            header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .nav-links { width: 100%; justify-content: space-between; }
+            .user-profile { align-self: flex-end; }
+            .image-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+        }
     </style>
 </head>
 <body>
@@ -94,7 +118,7 @@
     <div class="container">
         <header>
             <div class="brand">FILLED WITH LOVE</div>
-            <div style="display: flex; align-items: center; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 20px; width: 100%; justify-content: space-between;">
                 <div class="nav-links">
                     <div class="nav-item" onclick="switchTab('forum')">Posts</div>
                     <div class="nav-item active" onclick="switchTab('story')">CZ's Story</div>
@@ -380,7 +404,7 @@
             renderKitchenPreviews();
         }
 
-        // --- Posts Logic (With Likes, Comments, Edit) ---
+        // --- Posts Logic (With Likes, Comments, Edit, Avatar) ---
         async function loadPosts() {
             try {
                 const res = await fetch(`${API_URL}/posts`);
@@ -408,12 +432,19 @@
                         likeCount = likeData.count;
                     } catch(e) {}
 
+                    // 【修改点】处理头像显示，如果没有头像则使用默认占位符
+                    const avatarSrc = post.avatar ? `${API_URL}${post.avatar}` : '';
+                    const avatarImg = avatarSrc ? `<img src="${avatarSrc}" class="post-avatar">` : `<div class="post-avatar" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#999;">${post.username.charAt(0).toUpperCase()}</div>`;
+
                     const div = document.createElement('div');
                     div.className = 'card';
                     div.id = `post-${post.id}`;
                     div.innerHTML = `
-                        <div class="card-meta">
-                            <span>${post.username} &mdash; ${new Date(post.created_at).toLocaleDateString()}</span>
+                        <div class="card-header">
+                            ${avatarImg}
+                            <div class="card-meta">
+                                <span>${post.username} &mdash; ${new Date(post.created_at).toLocaleDateString()}</span>
+                            </div>
                         </div>
                         
                         <div class="view-mode">
@@ -557,8 +588,6 @@
                      renderPostPreviews();
 
                     await loadPosts();
-
-                    // 发布完帖子后，继续停留在 Posts 页面
                     switchTab('forum');
                 } else {
                     alert((await res.json()).message);
