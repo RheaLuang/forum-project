@@ -77,11 +77,15 @@ function getUserBySession(sessionId, callback) {
     return callback(null, null);
   }
   db.query(
-    `SELECT users.id, users.username, users.avatar FROM sessions JOIN users ON sessions.user_id = users.id WHERE sessions.session_id = ?`,
+    `SELECT users.id, users.username, users.avatar, users.role, users.is_banned
+     FROM sessions
+     JOIN users ON sessions.user_id = users.id
+     WHERE sessions.session_id = ?`,
     [sessionId],
     (err, results) => {
       if (err) return callback(err);
       if (results.length === 0) return callback(null, null);
+      if (results[0].is_banned) return callback(null, null);
       callback(null, results[0]);
     }
   );
@@ -98,6 +102,15 @@ function uploadImage(file, folder) {
     );
 
     stream.end(file.buffer);
+  });
+}
+
+function requireAdmin(req, res, callback) {
+  getUserBySession(req.body.sessionId, (err, user) => {
+    if (err) return res.status(500).json({ message: 'Failed to verify administrator' });
+    if (!user) return res.status(401).json({ message: 'Invalid session' });
+    if (user.role !== 'admin') return res.status(403).json({ message: 'Administrator access required' });
+    callback(user);
   });
 }
 
@@ -183,6 +196,7 @@ app.post('/login', (req, res) => {
     if (results.length === 0) return res.status(401).json({ message: 'Invalid username or password' });
 
     const user = results[0];
+    if (user.is_banned) return res.status(403).json({ message: 'This account has been banned' });
     const sessionId = generateSessionId();
 
     db.query('INSERT INTO sessions (session_id, user_id) VALUES (?, ?)', [sessionId, user.id], (err2) => {
@@ -195,7 +209,8 @@ app.post('/login', (req, res) => {
         sessionId,
         userId: user.id,
         username: user.username,
-        avatar: user.avatar
+        avatar: user.avatar,
+        role: user.role
       });
     });
   });
@@ -209,7 +224,55 @@ app.post('/me', (req, res) => {
       return res.status(500).json({ message: 'Failed to get user' });
     }
     if (!user) return res.status(401).json({ message: 'Invalid session' });
-    res.json({ userId: user.id, username: user.username, avatar: user.avatar });
+    res.json({ userId: user.id, username: user.username, avatar: user.avatar, role: user.role });
+  });
+});
+
+app.post('/admin/users', (req, res) => {
+  requireAdmin(req, res, () => {
+    db.query(
+      `SELECT users.id, users.username, users.avatar, users.role, users.is_banned, users.created_at,
+              (SELECT COUNT(*) FROM posts WHERE posts.user_id = users.id) AS post_count,
+              (SELECT COUNT(*) FROM comments WHERE comments.user_id = users.id) AS comment_count
+       FROM users
+       ORDER BY users.created_at DESC`,
+      (err, results) => {
+        if (err) return res.status(500).json({ message: 'Failed to load users' });
+        res.json(results);
+      }
+    );
+  });
+});
+
+app.put('/admin/users/:id/ban', (req, res) => {
+  requireAdmin(req, res, (admin) => {
+    const userId = Number(req.params.id);
+    if (userId === Number(admin.id)) return res.status(400).json({ message: 'You cannot ban your own account' });
+
+    db.query('SELECT id, role FROM users WHERE id = ?', [userId], (err, results) => {
+      if (err) return res.status(500).json({ message: 'Failed to find user' });
+      if (results.length === 0) return res.status(404).json({ message: 'User not found' });
+      if (results[0].role === 'admin') return res.status(403).json({ message: 'Administrator accounts cannot be banned' });
+
+      db.query('UPDATE users SET is_banned = 1 WHERE id = ?', [userId], (err2) => {
+        if (err2) return res.status(500).json({ message: 'Failed to ban user' });
+        db.query('DELETE FROM sessions WHERE user_id = ?', [userId], (err3) => {
+          if (err3) return res.status(500).json({ message: 'User was banned, but sessions could not be cleared' });
+          res.json({ message: 'User banned' });
+        });
+      });
+    });
+  });
+});
+
+app.put('/admin/users/:id/unban', (req, res) => {
+  requireAdmin(req, res, () => {
+    const userId = Number(req.params.id);
+    db.query('UPDATE users SET is_banned = 0 WHERE id = ?', [userId], (err, result) => {
+      if (err) return res.status(500).json({ message: 'Failed to unban user' });
+      if (result.affectedRows === 0) return res.status(404).json({ message: 'User not found' });
+      res.json({ message: 'User unbanned' });
+    });
   });
 });
 
@@ -364,7 +427,9 @@ app.delete('/posts/:id', (req, res) => {
       if (results.length === 0) return res.status(404).json({ message: 'Post not found' });
       
       const post = results[0];
-      if (Number(post.user_id) !== Number(user.id)) return res.status(403).json({ message: 'You can only delete your own post' });
+      if (Number(post.user_id) !== Number(user.id) && user.role !== 'admin') {
+        return res.status(403).json({ message: 'You can only delete your own post' });
+      }
 
       db.query('DELETE FROM posts WHERE id = ?', [postId], async (err3) => {
         if (err3) return res.status(500).json({ message: 'Failed to delete post' });
@@ -457,7 +522,9 @@ app.delete('/comments/:id', (req, res) => {
       if (results.length === 0) return res.status(404).json({ message: 'Comment not found' });
       
       const comment = results[0];
-      if (Number(comment.user_id) !== Number(user.id)) return res.status(403).json({ message: 'You can only delete your own comment' });
+      if (Number(comment.user_id) !== Number(user.id) && user.role !== 'admin') {
+        return res.status(403).json({ message: 'You can only delete your own comment' });
+      }
 
       db.query('DELETE FROM comments WHERE id = ?', [commentId], (err3) => {
         if (err3) return res.status(500).json({ message: 'Failed to delete comment' });

@@ -8,6 +8,7 @@
     "dev": "node --watch src/server.js",
     "db:test": "node db/test-connection.js",
     "test:app": "node tests/app-smoke.js",
+    "test:admin": "node tests/admin-smoke.js",
     "test:uploads": "node tests/cloudinary-smoke.js",
     "test": "node --check src/server.js && node --check db/db.js"
   },

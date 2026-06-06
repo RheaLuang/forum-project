@@ -123,6 +123,7 @@
                     <div class="nav-item" onclick="switchTab('forum')">Posts</div>
                     <div class="nav-item active" onclick="switchTab('story')">CZ's Story</div>
                     <div class="nav-item" onclick="switchTab('kitchen')">Kitchen</div>
+                    <div id="admin-nav" class="nav-item hidden" onclick="switchTab('admin')">Admin</div>
                 </div>
                 <div id="user-display" class="user-profile" onclick="openAuth()">
                     <img src="" class="avatar-small hidden" id="header-avatar">
@@ -170,6 +171,15 @@
             </div>
             <div id="kitchen-container"></div>
         </div>
+
+        <!-- Tab: Admin -->
+        <div id="tab-admin" class="section">
+            <div class="card">
+                <div class="card-title">User Administration</div>
+                <div class="card-content" style="margin-bottom:20px;">Ban or restore user accounts and review their activity.</div>
+                <div id="admin-users"></div>
+            </div>
+        </div>
     </div>
 
     <script src="./config.js"></script>
@@ -185,12 +195,42 @@
         let currentUser = localStorage.getItem('username');
         let currentUserId = localStorage.getItem('userId');
         let userAvatar = localStorage.getItem('userAvatar');
+        let currentUserRole = localStorage.getItem('userRole') || 'user';
         let isLoginMode = true;
 
         let postFiles = [];
         let kitchenFiles = [];
 
-        function init() {
+        async function init() {
+            if (sessionId) {
+                try {
+                    const res = await fetch(`${API_URL}/me`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionId })
+                    });
+                    if (res.ok) {
+                        const user = await res.json();
+                        currentUser = user.username;
+                        currentUserId = user.userId;
+                        userAvatar = user.avatar;
+                        currentUserRole = user.role || 'user';
+                        localStorage.setItem('username', currentUser);
+                        localStorage.setItem('userId', String(currentUserId));
+                        localStorage.setItem('userAvatar', userAvatar || '');
+                        localStorage.setItem('userRole', currentUserRole);
+                    } else if (res.status === 401) {
+                        localStorage.clear();
+                        sessionId = null;
+                        currentUser = null;
+                        currentUserId = null;
+                        userAvatar = null;
+                        currentUserRole = 'user';
+                    }
+                } catch (err) {
+                    console.error('Could not refresh session', err);
+                }
+            }
             updateUI();
             loadPosts();
             loadKitchen();
@@ -202,6 +242,7 @@
             const avatarEl = document.getElementById('header-avatar');
             const createPostArea = document.getElementById('create-post-area');
             const createKitchenArea = document.getElementById('create-kitchen-area');
+            const adminNav = document.getElementById('admin-nav');
             
             if (sessionId && currentUser) {
                 usernameEl.innerText = currentUser;
@@ -220,9 +261,11 @@
                 createKitchenArea.classList.add('hidden');
                 avatarEl.classList.add('hidden');
             }
+            adminNav.classList.toggle('hidden', currentUserRole !== 'admin');
         }
 
         window.switchTab = function(tabName) {
+            if (tabName === 'admin' && currentUserRole !== 'admin') tabName = 'story';
             document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             
@@ -232,6 +275,10 @@
             if(tabName === 'forum') navItems[0].classList.add('active');
             if(tabName === 'story') navItems[1].classList.add('active');
             if(tabName === 'kitchen') navItems[2].classList.add('active');
+            if(tabName === 'admin') {
+                navItems[3].classList.add('active');
+                loadAdminUsers();
+            }
         }
 
         // --- Auth & Avatar ---
@@ -309,6 +356,7 @@
                     sessionId = data.sessionId;
                     currentUser = data.username;
                     currentUserId = data.userId;
+                    currentUserRole = data.role || 'user';
                     
                     const meRes = await fetch(`${API_URL}/me`, {
                          method: 'POST',
@@ -317,11 +365,13 @@
                     });
                     const meData = await meRes.json();
                     userAvatar = meData.avatar;
+                    currentUserRole = meData.role || currentUserRole;
 
                     localStorage.setItem('sessionId', sessionId);
                     localStorage.setItem('username', currentUser);
                     localStorage.setItem('userId', String(currentUserId));
                     localStorage.setItem('userAvatar', userAvatar || '');
+                    localStorage.setItem('userRole', currentUserRole);
                     
                     closeAuth();
                     updateUI();
@@ -421,6 +471,7 @@
 
                 for (const post of posts) {
                     const isOwner = currentUserId && (Number(post.user_id) === Number(currentUserId));
+                    const canDelete = isOwner || currentUserRole === 'admin';
                     
                     let imagesHtml = '';
                     if (post.images) {
@@ -479,8 +530,8 @@
                                 </button>
                             </div>
                             <div>
-                                ${isOwner ? `
-                                    <button class="text-btn edit-btn" onclick="enableEdit(${post.id})">Edit</button>
+                                ${isOwner ? `<button class="text-btn edit-btn" onclick="enableEdit(${post.id})">Edit</button>` : ''}
+                                ${canDelete ? `
                                     <button class="text-btn delete-btn" onclick="deletePost(${post.id})">Delete</button>
                                 ` : ''}
                             </div>
@@ -627,7 +678,7 @@
                 document.getElementById(`comments-list-${postId}`).innerHTML = comments.map(c => `
                     <div class="comment">
                         <strong>${c.username}:</strong> ${escapeHtml(c.content)}
-                        ${currentUserId && Number(c.user_id) === Number(currentUserId) ? 
+                        ${(currentUserId && Number(c.user_id) === Number(currentUserId)) || currentUserRole === 'admin' ?
                             `<span style="color:red; cursor:pointer; margin-left:5px;" onclick="deleteComment(${c.id}, ${postId})">×</span>` : ''}
                     </div>
                 `).join('');
@@ -660,6 +711,58 @@
                 });
                 if (res.ok) toggleComments(postId);
             } catch (err) { console.error(err); }
+        }
+
+        async function loadAdminUsers() {
+            if (currentUserRole !== 'admin') return;
+            const container = document.getElementById('admin-users');
+            container.innerHTML = 'Loading users...';
+            try {
+                const res = await fetch(`${API_URL}/admin/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId })
+                });
+                const users = await res.json();
+                if (!res.ok) throw new Error(users.message);
+
+                container.innerHTML = users.map(user => {
+                    const status = user.is_banned ? 'Banned' : 'Active';
+                    const action = user.role === 'admin' ? '' : `
+                        <button class="${user.is_banned ? '' : 'secondary'}"
+                            onclick="setUserBan(${user.id}, ${user.is_banned ? 'false' : 'true'})">
+                            ${user.is_banned ? 'Unban' : 'Ban'}
+                        </button>`;
+                    return `
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:15px; padding:14px 0; border-bottom:1px solid var(--border-color);">
+                            <div>
+                                <strong>${escapeHtml(user.username)}</strong>
+                                <div style="font-size:10px; color:var(--text-sub); margin-top:5px;">
+                                    ${user.role.toUpperCase()} · ${status} · ${user.post_count} posts · ${user.comment_count} comments
+                                </div>
+                            </div>
+                            ${action}
+                        </div>`;
+                }).join('');
+            } catch (err) {
+                container.innerHTML = `<div style="color:red;">${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        window.setUserBan = async function(userId, shouldBan) {
+            if (!confirm(`${shouldBan ? 'Ban' : 'Unban'} this user?`)) return;
+            try {
+                const res = await fetch(`${API_URL}/admin/users/${userId}/${shouldBan ? 'ban' : 'unban'}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message);
+                loadAdminUsers();
+            } catch (err) {
+                alert(err.message);
+            }
         }
 
         // --- Kitchen Logic ---

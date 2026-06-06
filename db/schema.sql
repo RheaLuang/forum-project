@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS users (
   username VARCHAR(100) NOT NULL,
   password VARCHAR(255) NOT NULL,
   avatar VARCHAR(2048) NULL,
+  role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
+  is_banned TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_users_username (username)
