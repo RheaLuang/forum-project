@@ -1,7 +1,9 @@
 const db = require('./db');
 
 db.query(
-  'SELECT DATABASE() AS database_name, VERSION() AS mysql_version',
+  process.env.DB_DRIVER === 'd1'
+    ? 'SELECT 1 AS healthy'
+    : 'SELECT DATABASE() AS database_name, VERSION() AS mysql_version',
   (err, rows) => {
     if (err) {
       console.error('Database connection failed:', err.message);

@@ -1,5 +1,10 @@
 require('dotenv').config();
 
+if (process.env.DB_DRIVER === 'd1') {
+  module.exports = require('./d1');
+  return;
+}
+
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2');

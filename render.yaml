@@ -10,6 +10,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22
+      - key: DB_DRIVER
+        value: mysql
       - key: DB_HOST
         sync: false
       - key: DB_PORT
@@ -24,6 +26,12 @@ services:
         value: "true"
       - key: DB_SSL_REJECT_UNAUTHORIZED
         value: "false"
+      - key: CLOUDFLARE_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_D1_DATABASE_ID
+        sync: false
+      - key: CLOUDFLARE_API_TOKEN
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

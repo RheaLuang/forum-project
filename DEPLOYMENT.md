@@ -87,3 +87,49 @@ npm run test:uploads
 
 The smoke test creates temporary Aiven and Cloudinary data and removes it when
 the test finishes.
+
+## 6. Cloudflare D1
+
+Cloudflare D1 is SQLite-based and is accessed from this Render backend through
+Cloudflare's D1 REST API. Keep MySQL active until the D1 import has been tested.
+
+Create a D1 database in Cloudflare, then create an API token with D1 edit
+permission. Add these variables locally and later in Render:
+
+```env
+DB_DRIVER=d1
+CLOUDFLARE_ACCOUNT_ID=your-cloudflare-account-id
+CLOUDFLARE_D1_DATABASE_ID=your-d1-database-id
+CLOUDFLARE_API_TOKEN=your-d1-api-token
+```
+
+Import the current Aiven/MySQL data directly into D1:
+
+```powershell
+npm run db:d1:migrate
+```
+
+Or export an importable SQL file first:
+
+```powershell
+npm run db:d1:export
+```
+
+The export script writes `outputs/forum-d1-import.sql`. You can import that file
+with Cloudflare Wrangler:
+
+```powershell
+npx wrangler d1 execute YOUR_D1_DATABASE_NAME --remote --file outputs/forum-d1-import.sql
+```
+
+After import, test against D1:
+
+```powershell
+$env:DB_DRIVER="d1"
+npm run db:test
+npm run test:app
+```
+
+When tests pass, change Render's `DB_DRIVER` to `d1`, add the three Cloudflare
+variables above, and redeploy. The MySQL variables can stay temporarily as a
+rollback option.
